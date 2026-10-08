@@ -201,6 +201,14 @@ function App() {
   }))
 
   const saveSettings = (settings) => setSavings((previous) => ({ ...previous, settings: { ...previous.settings, ...settings } }))
+  const resetCategoryPeriods = () => {
+    if (!window.confirm('모든 카테고리의 기간을 2026년 1월부터 2030년 12월로 초기화할까요?')) return
+    setSavings((previous) => ({ ...previous, categories: previous.categories.map((category) => ({ ...category, start: START_MONTH, end: END_MONTH })) }))
+  }
+  const resetCategoryTargets = () => {
+    if (!window.confirm('모든 카테고리의 목표금액과 여행적금 예산을 초기화할까요?')) return
+    setSavings((previous) => ({ ...previous, categories: previous.categories.map((category) => ({ ...category, target: '', travel: category.travel ? { ...category.travel, budget: 0 } : undefined })) }))
+  }
 
   return (
     <div className="retro-desktop">
@@ -236,7 +244,7 @@ function App() {
           <div className="sidebar-bottom"><small>저장 위치</small><b>이 브라우저</b><span>● 자동 저장 중</span></div>
         </aside>
     <main className="app-shell">
-      {showSettings ? <SettingsPage settings={savings.settings} onSave={saveSettings} /> : activeTravel ? <TravelSavingsPage category={activeTravel} onBack={() => setActiveTravelId(null)} onAddDeposit={addTravelDeposit} onRemoveDeposit={removeTravelDeposit} /> : <>
+      {showSettings ? <SettingsPage settings={savings.settings} onSave={saveSettings} onResetPeriods={resetCategoryPeriods} onResetTargets={resetCategoryTargets} /> : activeTravel ? <TravelSavingsPage category={activeTravel} onBack={() => setActiveTravelId(null)} onAddDeposit={addTravelDeposit} onRemoveDeposit={removeTravelDeposit} /> : <>
       <header className="hero">
         <div>
           <p className="eyebrow">MY FIVE-YEAR MONEY DIARY</p>
@@ -349,7 +357,7 @@ function TravelSavingsPage({ category, onBack, onAddDeposit, onRemoveDeposit }) 
   </section>
 }
 
-function SettingsPage({ settings, onSave }) {
+function SettingsPage({ settings, onSave, onResetPeriods, onResetTargets }) {
   const [form, setForm] = useState(settings)
   const [message, setMessage] = useState('')
   const updatePhoto = (event) => {
@@ -367,7 +375,7 @@ function SettingsPage({ settings, onSave }) {
   }
   return <section className="settings-page">
     <header className="travel-page-header"><div><p className="eyebrow">PERSONALIZE MY SPACE</p><h1>설정 <em>페이지</em></h1><p>왼쪽 미니 블로그를 나답게 꾸며요.</p></div></header>
-    <section className="settings-panel"><div className="travel-panel-title"><h2>⚙ 프로필 & 음악 설정</h2></div><form onSubmit={submit}><div className="settings-photo"><img src={form.profileImage || profileFrog} alt="프로필 미리보기" /><label className="photo-upload">사진 선택<input type="file" accept="image/*" onChange={updatePhoto} /></label>{form.profileImage && <button type="button" className="photo-reset" onClick={() => setForm((previous) => ({ ...previous, profileImage: '' }))}>기본 사진으로</button>}</div><label>닉네임<input value={form.nickname} onChange={(event) => setForm({ ...form, nickname: event.target.value })} placeholder="닉네임" /></label><label>한 줄 소개<input value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} placeholder="소개 문구" /></label><label>Spotify 곡 링크<input value={form.spotifyUrl} onChange={(event) => setForm({ ...form, spotifyUrl: event.target.value })} placeholder="https://open.spotify.com/track/..." /></label>{message && <p className="settings-message">✦ {message}</p>}<button className="save-button" type="submit">설정 저장하기</button></form></section>
+    <section className="settings-panel"><div className="travel-panel-title"><h2>⚙ 프로필 & 음악 설정</h2></div><form onSubmit={submit}><div className="settings-photo"><img src={form.profileImage || profileFrog} alt="프로필 미리보기" /><label className="photo-upload">사진 선택<input type="file" accept="image/*" onChange={updatePhoto} /></label>{form.profileImage && <button type="button" className="photo-reset" onClick={() => setForm((previous) => ({ ...previous, profileImage: '' }))}>기본 사진으로</button>}</div><label>닉네임<input value={form.nickname} onChange={(event) => setForm({ ...form, nickname: event.target.value })} placeholder="닉네임" /></label><label>한 줄 소개<input value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} placeholder="소개 문구" /></label><label>Spotify 곡 링크<input value={form.spotifyUrl} onChange={(event) => setForm({ ...form, spotifyUrl: event.target.value })} placeholder="https://open.spotify.com/track/..." /></label>{message && <p className="settings-message">✦ {message}</p>}<button className="save-button" type="submit">설정 저장하기</button></form></section><section className="settings-panel reset-panel"><div className="travel-panel-title"><h2>↻ 카테고리 데이터 초기화</h2></div><div className="reset-options"><div><strong>기간 초기화</strong><p>모든 기간을 2026.01 — 2030.12로 되돌려요.</p><button type="button" className="soft-reset-button" onClick={onResetPeriods}>기간 초기화</button></div><div><strong>목표금액 초기화</strong><p>목표금액과 여행적금 예산만 지워요. 기록은 유지돼요.</p><button type="button" className="soft-reset-button danger-reset" onClick={onResetTargets}>목표금액 초기화</button></div></div></section>
   </section>
 }
 
