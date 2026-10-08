@@ -161,8 +161,19 @@ function App() {
   )
 
   return (
+    <div className="retro-desktop">
+      <div className="window-shell">
+        <div className="window-titlebar"><span>₩ SAVE ME.exe — 저축 관리 프로그램</span><div className="window-controls" aria-hidden="true"><i>_</i><i>□</i><i>×</i></div></div>
+        <aside className="sidebar">
+          <div className="brand"><b>₩</b><span>MY 저축 플래너</span></div>
+          <nav aria-label="저축 메뉴">
+            <button className="nav-item active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>▣</span> 대시보드</button>
+            <button className="nav-item" onClick={() => document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' })}><span>☑</span> 저축 체크</button>
+            <button className="nav-item" onClick={() => document.querySelector('.categories-section')?.scrollIntoView({ behavior: 'smooth' })}><span>▤</span> 내 목표</button>
+          </nav>
+          <div className="sidebar-bottom"><small>저장 위치</small><b>이 브라우저</b><span>● 자동 저장 중</span></div>
+        </aside>
     <main className="app-shell">
-      <div className="sparkle sparkle-one">✦</div><div className="sparkle sparkle-two">✧</div>
       <header className="hero">
         <div>
           <p className="eyebrow">MY FIVE-YEAR MONEY DIARY</p>
@@ -246,6 +257,8 @@ function App() {
         </section>
       </div>}
     </main>
+      </div>
+    </div>
   )
 }
 
