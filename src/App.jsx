@@ -23,13 +23,14 @@ const makeMonths = (start = START_MONTH, end = END_MONTH) => {
 const PLAN_MONTHS = makeMonths()
 const YEAR_OPTIONS = [2026, 2027, 2028, 2029, 2030]
 const emptyForm = { name: '', account: '', start: '', end: '', deposit: '', target: '', type: 'regular' }
+const DEFAULT_SETTINGS = { nickname: 'coco', bio: '오늘도 귀엽게 저축하는 중 .ᐟ', profileImage: '', spotifyUrl: 'https://open.spotify.com/track/2Lqdqm1ql2AWdEgLjwirN4?si=94058eaad1d8490f' }
 
 const defaultCategories = () => [
   { id: 'isa', name: 'ISA', account: 'ISA 계좌', start: '2026-01', end: '2030-12', deposit: 500000, target: '' },
   { id: 'youth-future', name: '청년미래적금', account: '청년미래적금', start: '2026-10', end: '2029-09', deposit: 500000, target: '' },
 ]
 
-const initialState = () => ({ categories: defaultCategories(), checks: {} })
+const initialState = () => ({ categories: defaultCategories(), checks: {}, settings: { ...DEFAULT_SETTINGS } })
 const monthLabel = (month) => `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`
 const yearOf = (month) => Number(month.slice(0, 4))
 const currentMonth = () => {
@@ -40,11 +41,15 @@ const currentMonth = () => {
 const isScheduled = (category, month) => month >= (category.start || START_MONTH) && month <= (category.end || END_MONTH)
 const checkKey = (categoryId, month) => `${categoryId}:${month}`
 const formatMoney = (value) => money.format(Number(value || 0))
+const spotifyEmbedUrl = (url) => {
+  const trackId = url?.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/)?.[1]
+  return `https://open.spotify.com/embed/track/${trackId || '2Lqdqm1ql2AWdEgLjwirN4'}?utm_source=generator`
+}
 
 function loadSavings() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-    if (saved?.version === 1 && Array.isArray(saved.categories) && saved.checks) return saved
+    if (saved?.version === 1 && Array.isArray(saved.categories) && saved.checks) return { ...saved, settings: { ...DEFAULT_SETTINGS, ...(saved.settings || {}) } }
   } catch {
     // Start with the default plan when browser storage is unavailable or invalid.
   }
@@ -61,6 +66,7 @@ function App() {
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [activeTravelId, setActiveTravelId] = useState(null)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...savings, version: 1 }))
@@ -191,6 +197,8 @@ function App() {
     } : category),
   }))
 
+  const saveSettings = (settings) => setSavings((previous) => ({ ...previous, settings: { ...previous.settings, ...settings } }))
+
   return (
     <div className="retro-desktop">
       <div className="desktop-decor decor-cloud">☁</div>
@@ -200,21 +208,22 @@ function App() {
         <aside className="sidebar">
           <div className="brand"><b>₩</b><span>MY 저축 플래너</span></div>
           <section className="profile-card" aria-label="프로필">
-            <img src={profileFrog} alt="노란 모자를 쓴 초록색 캐릭터 프로필" />
-            <div><strong>coco</strong><span>saving archive ★</span></div>
-            <p>오늘도 귀엽게<br />저축하는 중 .ᐟ</p>
+            <img src={savings.settings?.profileImage || profileFrog} alt="프로필" />
+            <div><strong>{savings.settings?.nickname || 'coco'}</strong><span>saving archive ★</span></div>
+            <p>{savings.settings?.bio || DEFAULT_SETTINGS.bio}</p>
           </section>
           <nav aria-label="저축 메뉴">
-            <button className={`nav-item ${!activeTravelId ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>▣</span> 대시보드</button>
-            <button className="nav-item" onClick={() => document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' })}><span>☑</span> 저축 체크</button>
-            <button className="nav-item" onClick={() => document.querySelector('.categories-section')?.scrollIntoView({ behavior: 'smooth' })}><span>▤</span> 내 목표</button>
-            {travelCategories.map((category) => <button key={category.id} className={`nav-item travel-nav ${activeTravelId === category.id ? 'active' : ''}`} onClick={() => { setActiveTravelId(category.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>✈</span> {category.name}</button>)}
+            <button className={`nav-item ${!activeTravelId && !showSettings ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); setShowSettings(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>▣</span> 대시보드</button>
+            <button className="nav-item" onClick={() => { setShowSettings(false); document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' }) }}><span>☑</span> 저축 체크</button>
+            <button className="nav-item" onClick={() => { setShowSettings(false); document.querySelector('.categories-section')?.scrollIntoView({ behavior: 'smooth' }) }}><span>▤</span> 내 목표</button>
+            {travelCategories.map((category) => <button key={category.id} className={`nav-item travel-nav ${activeTravelId === category.id ? 'active' : ''}`} onClick={() => { setActiveTravelId(category.id); setShowSettings(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>✈</span> {category.name}</button>)}
+            <button className={`nav-item ${showSettings ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); setShowSettings(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>⚙</span> 설정</button>
           </nav>
           <section className="music-card" aria-label="지금 듣는 노래">
             <p>NOW PLAYING ♫</p>
             <iframe
               title="Spotify track player"
-              src="https://open.spotify.com/embed/track/2Lqdqm1ql2AWdEgLjwirN4?utm_source=generator"
+              src={spotifyEmbedUrl(savings.settings?.spotifyUrl)}
               loading="lazy"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             />
@@ -222,7 +231,7 @@ function App() {
           <div className="sidebar-bottom"><small>저장 위치</small><b>이 브라우저</b><span>● 자동 저장 중</span></div>
         </aside>
     <main className="app-shell">
-      {activeTravel ? <TravelSavingsPage category={activeTravel} onBack={() => setActiveTravelId(null)} onAddDeposit={addTravelDeposit} onRemoveDeposit={removeTravelDeposit} /> : <>
+      {showSettings ? <SettingsPage settings={savings.settings} onSave={saveSettings} /> : activeTravel ? <TravelSavingsPage category={activeTravel} onBack={() => setActiveTravelId(null)} onAddDeposit={addTravelDeposit} onRemoveDeposit={removeTravelDeposit} /> : <>
       <header className="hero">
         <div>
           <p className="eyebrow">MY FIVE-YEAR MONEY DIARY</p>
@@ -333,6 +342,28 @@ function TravelSavingsPage({ category, onBack, onAddDeposit, onRemoveDeposit }) 
     <header className="travel-page-header"><div><button className="back-button" onClick={onBack}>← 대시보드</button><p className="eyebrow">TRAVEL SAVINGS PAGE</p><h1>{category.name} <em>여행적금</em></h1><p>여행을 향해 오늘도 한 칸 더 가까이.</p></div></header>
     <section className="travel-summary"><article className="travel-progress"><span>여행 예산 {formatMoney(budget)}</span><strong>{formatMoney(saved)}</strong><p>현재까지 모은 금액</p><div className="progress-track"><i style={{ width: `${progress}%` }} /></div><b>{progress}% complete</b></article><article className="travel-remaining"><span>남은 금액</span><strong>{formatMoney(remaining)}</strong><p>{remaining === 0 ? '목표 달성! 여행 갈 준비 끝 ✦' : '다음 입금으로 조금 더 가까워져요.'}</p></article></section>
     <section className="travel-grid"><article className="travel-panel"><div className="travel-panel-title"><h2>＋ 입금 기록하기</h2><span>NEW DEPOSIT</span></div><form className="travel-deposit-form" onSubmit={submit}><label>입금 날짜<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label>입금액<input inputMode="numeric" placeholder="예: 100000" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label><label>메모 <small>선택</small><input placeholder="예: 월급날 적금" value={form.memo} onChange={(event) => setForm({ ...form, memo: event.target.value })} /></label>{error && <p className="form-error">✦ {error}</p>}<button className="save-button" type="submit">입금 기록 추가</button></form></article><article className="travel-panel"><div className="travel-panel-title"><h2>▤ 입금 히스토리</h2><span>{deposits.length} records</span></div>{deposits.length ? <div className="travel-deposit-list">{deposits.map((deposit) => <div className="travel-deposit-row" key={deposit.id}><div><strong>{deposit.date}</strong><span>{deposit.memo || '저축 기록'}</span></div><b>+ {formatMoney(deposit.amount)}</b><button onClick={() => onRemoveDeposit(category.id, deposit.id)} aria-label="입금 기록 삭제">×</button></div>)}</div> : <p className="travel-empty">아직 입금 기록이 없어요.<br />첫 저축을 추가해 볼까요?</p>}</article></section>
+  </section>
+}
+
+function SettingsPage({ settings, onSave }) {
+  const [form, setForm] = useState(settings)
+  const [message, setMessage] = useState('')
+  const updatePhoto = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) return setMessage('사진은 2MB 이하로 선택해 주세요.')
+    const reader = new FileReader()
+    reader.onload = () => setForm((previous) => ({ ...previous, profileImage: reader.result }))
+    reader.readAsDataURL(file)
+  }
+  const submit = (event) => {
+    event.preventDefault()
+    onSave(form)
+    setMessage('설정을 저장했어요!')
+  }
+  return <section className="settings-page">
+    <header className="travel-page-header"><div><p className="eyebrow">PERSONALIZE MY SPACE</p><h1>설정 <em>페이지</em></h1><p>왼쪽 미니 블로그를 나답게 꾸며요.</p></div></header>
+    <section className="settings-panel"><div className="travel-panel-title"><h2>⚙ 프로필 & 음악 설정</h2></div><form onSubmit={submit}><div className="settings-photo"><img src={form.profileImage || profileFrog} alt="프로필 미리보기" /><label className="photo-upload">사진 선택<input type="file" accept="image/*" onChange={updatePhoto} /></label>{form.profileImage && <button type="button" className="photo-reset" onClick={() => setForm((previous) => ({ ...previous, profileImage: '' }))}>기본 사진으로</button>}</div><label>닉네임<input value={form.nickname} onChange={(event) => setForm({ ...form, nickname: event.target.value })} placeholder="닉네임" /></label><label>한 줄 소개<input value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} placeholder="소개 문구" /></label><label>Spotify 곡 링크<input value={form.spotifyUrl} onChange={(event) => setForm({ ...form, spotifyUrl: event.target.value })} placeholder="https://open.spotify.com/track/..." /></label>{message && <p className="settings-message">✦ {message}</p>}<button className="save-button" type="submit">설정 저장하기</button></form></section>
   </section>
 }
 
