@@ -87,6 +87,7 @@ function App() {
 
   const overallProgress = Math.round((checkedTotal / FIXED_PLAN_TOTAL) * 100)
   const travelCategories = useMemo(() => savings.categories.filter((category) => isTravelSavings(category.name)), [savings.categories])
+  const checklistCategories = useMemo(() => savings.categories.filter((category) => !isTravelSavings(category.name)), [savings.categories])
   const activeTravel = travelCategories.find((category) => category.id === activeTravelId)
 
   const visibleMonths = useMemo(() => {
@@ -284,8 +285,8 @@ function App() {
 
         <div className={`schedule ${view === 'all' ? 'all-schedule' : ''}`}>
           {view === 'all'
-            ? YEAR_OPTIONS.map((year) => <YearBlock key={year} year={year} months={PLAN_MONTHS.filter((month) => yearOf(month) === year)} categories={savings.categories} checks={savings.checks} onToggle={toggleCheck} />)
-            : visibleMonths.map((month) => <MonthCard key={month} month={month} categories={savings.categories} checks={savings.checks} onToggle={toggleCheck} />)}
+            ? YEAR_OPTIONS.map((year) => <YearBlock key={year} year={year} months={PLAN_MONTHS.filter((month) => yearOf(month) === year)} categories={checklistCategories} checks={savings.checks} onToggle={toggleCheck} />)
+            : visibleMonths.map((month) => <MonthCard key={month} month={month} categories={checklistCategories} checks={savings.checks} onToggle={toggleCheck} />)}
         </div>
       </section>
 
