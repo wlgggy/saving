@@ -165,11 +165,6 @@ function App() {
     <div className="retro-desktop">
       <div className="desktop-decor decor-cloud">☁</div>
       <div className="desktop-decor decor-star">★</div>
-      <div className="desktop-shortcuts" aria-hidden="true">
-        <span><i>📁</i>MY GOALS</span>
-        <span><i>💌</i>SAVE LIST</span>
-        <span><i>⭐</i>WISH!</span>
-      </div>
       <div className="window-shell">
         <div className="window-titlebar"><span>₩ SAVE ME.exe — 저축 관리 프로그램</span><div className="window-controls" aria-hidden="true"><i>_</i><i>□</i><i>×</i></div></div>
         <aside className="sidebar">
