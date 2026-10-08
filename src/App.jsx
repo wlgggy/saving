@@ -317,11 +317,11 @@ function App() {
           <button className="close-button" onClick={() => setModalOpen(false)} aria-label="닫기">×</button>
           <div className="modal-titlebar"><h2 id="modal-title">{editingId ? '카테고리 편집' : '새 카테고리 만들기'}</h2></div>
           <form onSubmit={submitCategory}>
-            <label>항목명 <b>필수</b><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="예: 여행 적금" autoFocus /></label>
-            <label>계좌번호 또는 상품명<input value={form.account} onChange={(event) => setForm({ ...form, account: event.target.value })} placeholder="예: 카카오뱅크 세이프박스" /></label>
+            <label>항목명 <b>필수</b><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoFocus /></label>
+            <label>계좌번호 또는 상품명<input value={form.account} onChange={(event) => setForm({ ...form, account: event.target.value })} /></label>
             <div className="form-row"><label>시작월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>종료월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div>
-            <label>1회 저축액 <small>선택</small><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: event.target.value })} placeholder="예: 100000" /></label>
-            <label>{isTravelSavings(form.name) ? '여행 예산' : '목표금액'} <small>{isTravelSavings(form.name) ? '필수' : '선택'}</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} placeholder="예: 3000000" /></label>
+            <label>1회 저축액 <small>선택</small><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: event.target.value })} /></label>
+            <label>{isTravelSavings(form.name) ? '여행 예산' : '목표금액'} <small>{isTravelSavings(form.name) ? '필수' : '선택'}</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} /></label>
             {formError && <p className="form-error">✦ {formError}</p>}
             <div className="modal-actions">{editingId && <button type="button" className="delete-button" onClick={() => deleteCategory(editingId)}>삭제</button>}<button type="submit" className="save-button">{editingId ? '저장하기' : '카테고리 추가'}</button></div>
           </form>
