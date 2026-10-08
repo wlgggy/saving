@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import profileFrog from './assets/profile-frog.png'
 import pixelAngelWingLeft from './assets/pixel-angel-wing-left.png'
 import pixelClouds from './assets/pixel-clouds.png'
+import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const START_MONTH = '2026-01'
 const END_MONTH = '2030-12'
@@ -55,11 +56,15 @@ const spotifyEmbedUrl = (url) => {
 function loadSavings() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-    if (saved?.version === 1 && Array.isArray(saved.categories) && saved.checks) return { ...saved, settings: { ...DEFAULT_SETTINGS, ...(saved.settings || {}) } }
+    if (saved?.version === 1 && Array.isArray(saved.categories) && saved.checks) return normalizeSavings(saved)
   } catch {
     // Start with the default plan when browser storage is unavailable or invalid.
   }
   return initialState()
+}
+
+function normalizeSavings(saved) {
+  return { ...saved, settings: { ...DEFAULT_SETTINGS, ...(saved.settings || {}) } }
 }
 
 function App() {
@@ -73,10 +78,81 @@ function App() {
   const [formError, setFormError] = useState('')
   const [activeTravelId, setActiveTravelId] = useState(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [cloudReady, setCloudReady] = useState(false)
+  const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured ? 'loading' : 'local')
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...savings, version: 1 }))
   }, [savings])
+
+  useEffect(() => {
+    if (!supabase) return undefined
+    let active = true
+
+    const loadCloudState = async () => {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      let session = sessionData.session
+      if (!session && !sessionError) {
+        const { data, error } = await supabase.auth.signInAnonymously()
+        if (error) {
+          if (active) setSyncStatus('error')
+          console.error('Supabase anonymous sign-in failed:', error.message)
+          return
+        }
+        session = data.session
+      }
+      if (!session) {
+        if (active) setSyncStatus('error')
+        return
+      }
+
+      const { data, error } = await supabase.from('planner_states').select('data').maybeSingle()
+      if (error) {
+        if (active) setSyncStatus('error')
+        console.error('Supabase planner state load failed:', error.message)
+        return
+      }
+      if (data?.data?.version === 1 && Array.isArray(data.data.categories) && data.data.checks) {
+        if (active) setSavings(normalizeSavings(data.data))
+      }
+      if (active) {
+        setCloudReady(true)
+        setSyncStatus('saved')
+      }
+    }
+
+    loadCloudState()
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!cloudReady || !supabase) return undefined
+    setSyncStatus('saving')
+    const saveTimer = window.setTimeout(async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError || !userData.user) {
+        setSyncStatus('error')
+        return
+      }
+      const { error } = await supabase.from('planner_states').upsert({
+        user_id: userData.user.id,
+        data: { ...savings, version: 1 },
+        updated_at: new Date().toISOString(),
+      })
+      setSyncStatus(error ? 'error' : 'saved')
+      if (error) console.error('Supabase planner state save failed:', error.message)
+    }, 600)
+
+    return () => window.clearTimeout(saveTimer)
+  }, [cloudReady, savings])
+
+  const syncLabel = {
+    loading: '클라우드 불러오는 중',
+    saving: '클라우드 저장 중',
+    saved: '클라우드 동기화됨',
+    error: '동기화 설정 필요',
+    local: '기기 내 저장 중',
+  }[syncStatus]
 
   const checkedTotal = useMemo(() => Object.entries(savings.checks).reduce((total, [key, checked]) => {
     if (!checked) return total
@@ -239,7 +315,7 @@ function App() {
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             />
           </section>
-          <div className="sidebar-bottom"><small>저장 위치</small><b>이 브라우저</b><span>● 자동 저장 중</span></div>
+          <div className="sidebar-bottom"><small>저장 위치</small><b>{isSupabaseConfigured ? 'Supabase' : '이 브라우저'}</b><span>● {syncLabel}</span></div>
         </aside>
     <main className="app-shell">
       {showSettings ? <SettingsPage settings={savings.settings} onSave={saveSettings} onResetPeriods={resetCategoryPeriods} onResetTargets={resetCategoryTargets} /> : activeTravel ? <TravelSavingsPage category={activeTravel} onBack={() => setActiveTravelId(null)} onAddDeposit={addTravelDeposit} onRemoveDeposit={removeTravelDeposit} /> : <>
