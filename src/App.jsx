@@ -122,10 +122,10 @@ function App() {
 
   const submitCategory = (event) => {
     event.preventDefault()
-    const deposit = Number(form.deposit.replaceAll(',', ''))
+    const deposit = form.deposit ? Number(form.deposit.replaceAll(',', '')) : 0
     const target = form.target ? Number(form.target.replaceAll(',', '')) : ''
     if (!form.name.trim()) return setFormError('항목명은 꼭 입력해 주세요.')
-    if (!Number.isFinite(deposit) || deposit <= 0) return setFormError('1회 저축액은 0원보다 크게 입력해 주세요.')
+    if (!Number.isFinite(deposit) || deposit < 0) return setFormError('1회 저축액을 다시 확인해 주세요.')
     if (form.target && (!Number.isFinite(target) || target < 0)) return setFormError('목표금액을 다시 확인해 주세요.')
     if (form.start && form.end && form.start > form.end) return setFormError('시작월은 종료월보다 앞서야 해요.')
 
@@ -266,7 +266,7 @@ function App() {
             <label>항목명 <b>필수</b><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="예: 여행 적금" autoFocus /></label>
             <label>계좌번호 또는 상품명<input value={form.account} onChange={(event) => setForm({ ...form, account: event.target.value })} placeholder="예: 카카오뱅크 세이프박스" /></label>
             <div className="form-row"><label>시작월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>종료월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div>
-            <label>1회 저축액 <b>필수</b><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: event.target.value })} placeholder="예: 100000" /></label>
+            <label>1회 저축액 <small>선택</small><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: event.target.value })} placeholder="예: 100000" /></label>
             <label>목표금액 <small>선택</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} placeholder="예: 3000000" /></label>
             {formError && <p className="form-error">✦ {formError}</p>}
             <div className="modal-actions">{editingId && <button type="button" className="delete-button" onClick={() => deleteCategory(editingId)}>삭제</button>}<button type="submit" className="save-button">{editingId ? '저장하기' : '카테고리 추가'}</button></div>
