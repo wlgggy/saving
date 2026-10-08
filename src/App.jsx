@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import profileFrog from './assets/profile-frog.png'
+import pixelAngelWings from './assets/pixel-angel-wings.png'
 
 const START_MONTH = '2026-01'
 const END_MONTH = '2030-12'
@@ -205,8 +206,7 @@ function App() {
     <div className="retro-desktop">
       <div className="desktop-decor decor-cloud">☁</div>
       <div className="desktop-decor decor-star">★</div>
-      <div className="dot-wing dot-wing-left" aria-hidden="true" />
-      <div className="dot-wing dot-wing-right" aria-hidden="true" />
+      <img className="pixel-angel-wings" src={pixelAngelWings} alt="" aria-hidden="true" />
       <div className="window-shell">
         <div className="window-titlebar"><span>₩ SAVE ME.exe — 저축 관리 프로그램</span><div className="window-controls" aria-hidden="true"><i>_</i><i>□</i><i>×</i></div></div>
         <aside className="sidebar">
