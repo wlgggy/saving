@@ -97,6 +97,8 @@ const formatMoney = (value) => money.format(Number(value || 0));
 const isMenuCategory = (category) => Boolean(category.menuPage);
 const isTravelGoalName = (name) => name.includes("여행적금");
 const displayTravelName = (name) => name || "여행";
+const displayTravelPageName = (name) =>
+  name.replaceAll("여행적금", "").replace(/\s+/g, " ").trim();
 const formatAmountInput = (value) =>
   value.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const spotifyEmbedUrl = (url) => {
@@ -987,7 +989,12 @@ function TravelSavingsPage({
   const deposits = category.travel?.deposits || [];
   const budget = Number(category.travel?.budget || category.target || 0);
   const isTravelGoal = isTravelGoalName(category.name);
-  const saved = deposits.reduce(
+  const deposited = deposits.reduce(
+    (total, deposit) =>
+      deposit.kind === "withdrawal" ? total : total + Number(deposit.amount),
+    0,
+  );
+  const netSaved = deposits.reduce(
     (total, deposit) =>
       total +
       (deposit.kind === "withdrawal"
@@ -995,10 +1002,13 @@ function TravelSavingsPage({
         : Number(deposit.amount)),
     0,
   );
-  const remaining = Math.max(0, budget - saved);
+  const remaining = Math.max(0, budget - netSaved);
   const progress = budget
-    ? Math.min(100, Math.round((saved / budget) * 100))
+    ? Math.min(100, Math.round((deposited / budget) * 100))
     : 0;
+  const pageName = isTravelGoal
+    ? displayTravelPageName(category.name)
+    : displayTravelName(category.name);
   const submit = (event) => {
     event.preventDefault();
     if (!form.kind) return setError("입금 또는 출금을 선택해 주세요.");
@@ -1024,7 +1034,7 @@ function TravelSavingsPage({
             {isTravelGoal ? "TRAVEL SAVINGS PAGE" : "SAVINGS PAGE"}
           </p>
           <h1>
-            {displayTravelName(category.name)}{" "}
+            {pageName && <>{pageName}{" "}</>}
             <em>{isTravelGoal ? "여행적금" : "저축 목표"}</em>
           </h1>
           <p>
@@ -1039,7 +1049,7 @@ function TravelSavingsPage({
           <span>
             {isTravelGoal ? "여행 예산" : "목표 금액"} {formatMoney(budget)}
           </span>
-          <strong>{formatMoney(saved)}</strong>
+          <strong>{formatMoney(deposited)}</strong>
           <p>현재까지 모은 금액</p>
           <div className="progress-track">
             <i style={{ width: `${progress}%` }} />
