@@ -206,7 +206,8 @@ function App() {
     <div className="retro-desktop">
       <div className="desktop-decor decor-cloud">☁</div>
       <div className="desktop-decor decor-star">★</div>
-      <img className="pixel-angel-wings" src={pixelAngelWings} alt="" aria-hidden="true" />
+      <div className="pixel-wing pixel-wing-left" aria-hidden="true"><img src={pixelAngelWings} alt="" /></div>
+      <div className="pixel-wing pixel-wing-right" aria-hidden="true"><img src={pixelAngelWings} alt="" /></div>
       <div className="window-shell">
         <div className="window-titlebar"><span>₩ SAVE ME.exe — 저축 관리 프로그램</span><div className="window-controls" aria-hidden="true"><i>_</i><i>□</i><i>×</i></div></div>
         <aside className="sidebar">
