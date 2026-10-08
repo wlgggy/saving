@@ -22,7 +22,7 @@ const makeMonths = (start = START_MONTH, end = END_MONTH) => {
 
 const PLAN_MONTHS = makeMonths()
 const YEAR_OPTIONS = [2026, 2027, 2028, 2029, 2030]
-const emptyForm = { name: '', account: '', start: '', end: '', deposit: '', target: '' }
+const emptyForm = { name: '', account: '', start: '', end: '', deposit: '', target: '', type: 'regular' }
 
 const defaultCategories = () => [
   { id: 'isa', name: 'ISA', account: 'ISA 계좌', start: '2026-01', end: '2030-12', deposit: 500000, target: '' },
@@ -60,6 +60,7 @@ function App() {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
+  const [activeTravelId, setActiveTravelId] = useState(null)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...savings, version: 1 }))
@@ -78,6 +79,8 @@ function App() {
   }, 0), [savings])
 
   const overallProgress = allScheduledTotal ? Math.round((checkedTotal / allScheduledTotal) * 100) : 0
+  const travelCategories = useMemo(() => savings.categories.filter((category) => category.type === 'travel'), [savings.categories])
+  const activeTravel = travelCategories.find((category) => category.id === activeTravelId)
 
   const visibleMonths = useMemo(() => {
     if (view === 'month') return [selectedMonth]
@@ -115,6 +118,7 @@ function App() {
       end: category.end === END_MONTH ? '' : category.end,
       deposit: String(category.deposit),
       target: category.target ? String(category.target) : '',
+      type: category.type || 'regular',
     })
     setFormError('')
     setModalOpen(true)
@@ -128,6 +132,7 @@ function App() {
     if (!Number.isFinite(deposit) || deposit < 0) return setFormError('1회 저축액을 다시 확인해 주세요.')
     if (form.target && (!Number.isFinite(target) || target < 0)) return setFormError('목표금액을 다시 확인해 주세요.')
     if (form.start && form.end && form.start > form.end) return setFormError('시작월은 종료월보다 앞서야 해요.')
+    if (form.type === 'travel' && (!Number.isFinite(target) || target <= 0)) return setFormError('여행 예산을 입력해 주세요.')
 
     const category = {
       id: editingId || `category-${Date.now()}`,
@@ -137,6 +142,10 @@ function App() {
       end: form.end || END_MONTH,
       deposit,
       target,
+      type: form.type,
+      travel: form.type === 'travel'
+        ? { budget: target, deposits: editingId ? (savings.categories.find((item) => item.id === editingId)?.travel?.deposits || []) : [] }
+        : undefined,
     }
     setSavings((previous) => ({
       ...previous,
@@ -161,6 +170,27 @@ function App() {
     0,
   )
 
+  const addTravelDeposit = (categoryId, input) => {
+    const amount = Number(input.amount.replaceAll(',', ''))
+    if (!Number.isFinite(amount) || amount <= 0) return '입금액을 0원보다 크게 입력해 주세요.'
+    setSavings((previous) => ({
+      ...previous,
+      categories: previous.categories.map((category) => category.id === categoryId ? {
+        ...category,
+        travel: { ...category.travel, deposits: [{ id: `travel-deposit-${Date.now()}`, date: input.date, amount, memo: input.memo.trim() }, ...(category.travel?.deposits || [])] },
+      } : category),
+    }))
+    return ''
+  }
+
+  const removeTravelDeposit = (categoryId, depositId) => setSavings((previous) => ({
+    ...previous,
+    categories: previous.categories.map((category) => category.id === categoryId ? {
+      ...category,
+      travel: { ...category.travel, deposits: (category.travel?.deposits || []).filter((deposit) => deposit.id !== depositId) },
+    } : category),
+  }))
+
   return (
     <div className="retro-desktop">
       <div className="desktop-decor decor-cloud">☁</div>
@@ -175,9 +205,10 @@ function App() {
             <p>오늘도 귀엽게<br />저축하는 중 .ᐟ</p>
           </section>
           <nav aria-label="저축 메뉴">
-            <button className="nav-item active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>▣</span> 대시보드</button>
+            <button className={`nav-item ${!activeTravelId ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>▣</span> 대시보드</button>
             <button className="nav-item" onClick={() => document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' })}><span>☑</span> 저축 체크</button>
             <button className="nav-item" onClick={() => document.querySelector('.categories-section')?.scrollIntoView({ behavior: 'smooth' })}><span>▤</span> 내 목표</button>
+            {travelCategories.map((category) => <button key={category.id} className={`nav-item travel-nav ${activeTravelId === category.id ? 'active' : ''}`} onClick={() => { setActiveTravelId(category.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>✈</span> {category.name}</button>)}
           </nav>
           <section className="music-card" aria-label="지금 듣는 노래">
             <p>NOW PLAYING ♫</p>
@@ -191,6 +222,7 @@ function App() {
           <div className="sidebar-bottom"><small>저장 위치</small><b>이 브라우저</b><span>● 자동 저장 중</span></div>
         </aside>
     <main className="app-shell">
+      {activeTravel ? <TravelSavingsPage category={activeTravel} onBack={() => setActiveTravelId(null)} onAddDeposit={addTravelDeposit} onRemoveDeposit={removeTravelDeposit} /> : <>
       <header className="hero">
         <div>
           <p className="eyebrow">MY FIVE-YEAR MONEY DIARY</p>
@@ -263,20 +295,45 @@ function App() {
           <button className="close-button" onClick={() => setModalOpen(false)} aria-label="닫기">×</button>
           <div className="modal-titlebar"><h2 id="modal-title">{editingId ? '카테고리 편집' : '새 카테고리 만들기'}</h2></div>
           <form onSubmit={submitCategory}>
+            <label>카테고리 유형<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}><option value="regular">일반 저축</option><option value="travel">여행적금</option></select></label>
             <label>항목명 <b>필수</b><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="예: 여행 적금" autoFocus /></label>
             <label>계좌번호 또는 상품명<input value={form.account} onChange={(event) => setForm({ ...form, account: event.target.value })} placeholder="예: 카카오뱅크 세이프박스" /></label>
             <div className="form-row"><label>시작월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>종료월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div>
             <label>1회 저축액 <small>선택</small><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: event.target.value })} placeholder="예: 100000" /></label>
-            <label>목표금액 <small>선택</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} placeholder="예: 3000000" /></label>
+            <label>{form.type === 'travel' ? '여행 예산' : '목표금액'} <small>{form.type === 'travel' ? '필수' : '선택'}</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} placeholder="예: 3000000" /></label>
             {formError && <p className="form-error">✦ {formError}</p>}
             <div className="modal-actions">{editingId && <button type="button" className="delete-button" onClick={() => deleteCategory(editingId)}>삭제</button>}<button type="submit" className="save-button">{editingId ? '저장하기' : '카테고리 추가'}</button></div>
           </form>
         </section>
       </div>}
+      </>}
     </main>
       </div>
     </div>
   )
+}
+
+function TravelSavingsPage({ category, onBack, onAddDeposit, onRemoveDeposit }) {
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), amount: '', memo: '' })
+  const [error, setError] = useState('')
+  const deposits = category.travel?.deposits || []
+  const budget = Number(category.travel?.budget || category.target || 0)
+  const saved = deposits.reduce((total, deposit) => total + Number(deposit.amount), 0)
+  const remaining = Math.max(0, budget - saved)
+  const progress = budget ? Math.min(100, Math.round((saved / budget) * 100)) : 0
+  const submit = (event) => {
+    event.preventDefault()
+    const result = onAddDeposit(category.id, form)
+    if (result) return setError(result)
+    setError('')
+    setForm({ date: new Date().toISOString().slice(0, 10), amount: '', memo: '' })
+  }
+
+  return <section className="travel-page">
+    <header className="travel-page-header"><div><button className="back-button" onClick={onBack}>← 대시보드</button><p className="eyebrow">TRAVEL SAVINGS PAGE</p><h1>{category.name} <em>여행적금</em></h1><p>여행을 향해 오늘도 한 칸 더 가까이.</p></div></header>
+    <section className="travel-summary"><article className="travel-progress"><span>여행 예산 {formatMoney(budget)}</span><strong>{formatMoney(saved)}</strong><p>현재까지 모은 금액</p><div className="progress-track"><i style={{ width: `${progress}%` }} /></div><b>{progress}% complete</b></article><article className="travel-remaining"><span>남은 금액</span><strong>{formatMoney(remaining)}</strong><p>{remaining === 0 ? '목표 달성! 여행 갈 준비 끝 ✦' : '다음 입금으로 조금 더 가까워져요.'}</p></article></section>
+    <section className="travel-grid"><article className="travel-panel"><div className="travel-panel-title"><h2>＋ 입금 기록하기</h2><span>NEW DEPOSIT</span></div><form className="travel-deposit-form" onSubmit={submit}><label>입금 날짜<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label>입금액<input inputMode="numeric" placeholder="예: 100000" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label><label>메모 <small>선택</small><input placeholder="예: 월급날 적금" value={form.memo} onChange={(event) => setForm({ ...form, memo: event.target.value })} /></label>{error && <p className="form-error">✦ {error}</p>}<button className="save-button" type="submit">입금 기록 추가</button></form></article><article className="travel-panel"><div className="travel-panel-title"><h2>▤ 입금 히스토리</h2><span>{deposits.length} records</span></div>{deposits.length ? <div className="travel-deposit-list">{deposits.map((deposit) => <div className="travel-deposit-row" key={deposit.id}><div><strong>{deposit.date}</strong><span>{deposit.memo || '저축 기록'}</span></div><b>+ {formatMoney(deposit.amount)}</b><button onClick={() => onRemoveDeposit(category.id, deposit.id)} aria-label="입금 기록 삭제">×</button></div>)}</div> : <p className="travel-empty">아직 입금 기록이 없어요.<br />첫 저축을 추가해 볼까요?</p>}</article></section>
+  </section>
 }
 
 function YearBlock({ year, months, categories, checks, onToggle }) {
