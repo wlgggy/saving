@@ -368,24 +368,6 @@ function App() {
     });
   };
 
-  const assignPeriodFreeCategory = (categoryId, month) => {
-    setSavings((previous) => ({
-      ...previous,
-      categories: previous.categories.map((category) => {
-        if (
-          category.id !== categoryId ||
-          !isPeriodFree(category) ||
-          category.manualMonths?.includes(month)
-        )
-          return category;
-        return {
-          ...category,
-          manualMonths: [...(category.manualMonths || []), month],
-        };
-      }),
-    }));
-  };
-
   const categoryCheckedTotal = (category) =>
     PLAN_MONTHS.reduce(
       (total, month) =>
@@ -713,7 +695,6 @@ function App() {
                           categories={checklistCategories}
                           checks={savings.checks}
                           onToggle={toggleCheck}
-                          onAssign={assignPeriodFreeCategory}
                         />
                       ))
                     : visibleMonths.map((month) => (
@@ -747,21 +728,10 @@ function App() {
                           Math.round((saved / category.target) * 100),
                         )
                       : null;
-                    const periodFree = isPeriodFree(category);
                     return (
                       <article
                         className={`category-card card-${index % 3}`}
                         key={category.id}
-                        data-period-free={periodFree || undefined}
-                        draggable={periodFree}
-                        onDragStart={(event) => {
-                          if (!periodFree) return;
-                          event.dataTransfer.effectAllowed = "copy";
-                          event.dataTransfer.setData(
-                            "text/save-me-category",
-                            category.id,
-                          );
-                        }}
                       >
                         <div
                           className="category-order"
@@ -1128,13 +1098,8 @@ function TravelSavingsPage({
               />
             </label>
             <label>
-              메모 <small>선택</small>
+              메모
               <input
-                placeholder={
-                  form.kind === "withdrawal"
-                    ? "예: 여행 예약금 결제"
-                    : "예: 월급날 적금"
-                }
                 value={form.memo}
                 onChange={(event) =>
                   setForm({ ...form, memo: event.target.value })
@@ -1318,14 +1283,16 @@ function SettingsPage({ settings, onSave, onResetPeriods, onResetTargets }) {
   );
 }
 
-function YearBlock({ year, months, categories, checks, onToggle, onAssign }) {
+function YearBlock({ year, months, categories, checks, onToggle }) {
   const total = months.reduce(
     (sum, month) =>
       sum +
       categories.reduce(
         (monthSum, category) =>
           monthSum +
-          (checks[checkKey(category.id, month)] ? Number(category.deposit) : 0),
+          (isScheduled(category, month) && checks[checkKey(category.id, month)]
+            ? Number(category.deposit)
+            : 0),
         0,
       ),
     0,
@@ -1334,7 +1301,7 @@ function YearBlock({ year, months, categories, checks, onToggle, onAssign }) {
     <section className="year-block">
       <div className="year-block-title">
         <h3>{year}</h3>
-        <span>{formatMoney(total)} saved</span>
+        <span>저금 총액 {formatMoney(total)}</span>
       </div>
       <div className="year-months">
         {months.map((month) => (
@@ -1345,7 +1312,6 @@ function YearBlock({ year, months, categories, checks, onToggle, onAssign }) {
             categories={categories}
             checks={checks}
             onToggle={onToggle}
-            onAssign={onAssign}
           />
         ))}
       </div>
@@ -1358,7 +1324,6 @@ function MonthCard({
   categories,
   checks,
   onToggle,
-  onAssign,
   compact = false,
 }) {
   const scheduled = categories.filter((category) =>
@@ -1371,21 +1336,7 @@ function MonthCard({
     0,
   );
   return (
-    <article
-      className={`month-card ${compact ? "compact" : ""} ${onAssign ? "drop-target" : ""}`}
-      onDragOver={onAssign ? (event) => event.preventDefault() : undefined}
-      onDrop={
-        onAssign
-          ? (event) => {
-              event.preventDefault();
-              const categoryId = event.dataTransfer.getData(
-                "text/save-me-category",
-              );
-              if (categoryId) onAssign(categoryId, month);
-            }
-          : undefined
-      }
-    >
+    <article className={`month-card ${compact ? "compact" : ""}`}>
       <div className="month-card-heading">
         <div>
           <span>{month.slice(0, 4)}</span>
