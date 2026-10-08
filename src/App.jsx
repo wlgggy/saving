@@ -81,9 +81,15 @@ const currentMonth = () => {
   const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   return PLAN_MONTHS.includes(key) ? key : "2026-10";
 };
-const isScheduled = (category, month) =>
-  month >= (category.start || START_MONTH) &&
-  month <= (category.end || END_MONTH);
+const isPeriodFree = (category) => !category.start && !category.end;
+const isScheduled = (category, month) => {
+  if (category.manualMonths?.includes(month)) return true;
+  if (isPeriodFree(category)) return false;
+  return (
+    month >= (category.start || START_MONTH) &&
+    month <= (category.end || END_MONTH)
+  );
+};
 const checkKey = (categoryId, month) => `${categoryId}:${month}`;
 const formatMoney = (value) => money.format(Number(value || 0));
 const isTravelSavings = (name) => name.includes("여행적금");
@@ -110,6 +116,10 @@ function loadSavings() {
 function normalizeSavings(saved) {
   return {
     ...saved,
+    categories: saved.categories.map((category) => ({
+      ...category,
+      manualMonths: category.manualMonths || [],
+    })),
     settings: { ...DEFAULT_SETTINGS, ...(saved.settings || {}) },
   };
 }
@@ -284,10 +294,13 @@ function App() {
       id: editingId || `category-${Date.now()}`,
       name: form.name.trim(),
       account: form.account.trim(),
-      start: form.start || START_MONTH,
-      end: form.end || END_MONTH,
+      start: form.start,
+      end: form.end,
       deposit,
       target,
+      manualMonths: editingId
+        ? savings.categories.find((item) => item.id === editingId)?.manualMonths || []
+        : [],
       travel: isTravelSavings(form.name)
         ? {
             budget: target,
@@ -321,6 +334,27 @@ function App() {
       ),
     }));
     setModalOpen(false);
+  };
+
+  const moveCategory = (id, direction) => {
+    setSavings((previous) => {
+      const fromIndex = previous.categories.findIndex((category) => category.id === id);
+      const toIndex = fromIndex + direction;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= previous.categories.length) return previous;
+      const categories = [...previous.categories];
+      [categories[fromIndex], categories[toIndex]] = [categories[toIndex], categories[fromIndex]];
+      return { ...previous, categories };
+    });
+  };
+
+  const assignPeriodFreeCategory = (categoryId, month) => {
+    setSavings((previous) => ({
+      ...previous,
+      categories: previous.categories.map((category) => {
+        if (category.id !== categoryId || !isPeriodFree(category) || category.manualMonths?.includes(month)) return category;
+        return { ...category, manualMonths: [...(category.manualMonths || []), month] };
+      }),
+    }));
   };
 
   const categoryCheckedTotal = (category) =>
@@ -649,6 +683,7 @@ function App() {
                           categories={checklistCategories}
                           checks={savings.checks}
                           onToggle={toggleCheck}
+                          onAssign={assignPeriodFreeCategory}
                         />
                       ))
                     : visibleMonths.map((month) => (
@@ -682,11 +717,37 @@ function App() {
                           Math.round((saved / category.target) * 100),
                         )
                       : null;
+                    const periodFree = isPeriodFree(category);
                     return (
                       <article
                         className={`category-card card-${index % 3}`}
                         key={category.id}
+                        data-period-free={periodFree || undefined}
+                        draggable={periodFree}
+                        onDragStart={(event) => {
+                          if (!periodFree) return;
+                          event.dataTransfer.effectAllowed = "copy";
+                          event.dataTransfer.setData("text/save-me-category", category.id);
+                        }}
                       >
+                        <div className="category-order" aria-label="카테고리 순서">
+                          <button
+                            type="button"
+                            onClick={() => moveCategory(category.id, -1)}
+                            disabled={index === 0}
+                            aria-label="카테고리 위로 이동"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveCategory(category.id, 1)}
+                            disabled={index === savings.categories.length - 1}
+                            aria-label="카테고리 아래로 이동"
+                          >
+                            ↓
+                          </button>
+                        </div>
                         <button
                           className="edit-button"
                           onClick={() => openEdit(category)}
@@ -772,7 +833,7 @@ function App() {
                       </label>
                       <div className="form-row">
                         <label>
-                          시작월 <small>선택</small>
+                          시작월
                           <input
                             type="month"
                             min={START_MONTH}
@@ -784,7 +845,7 @@ function App() {
                           />
                         </label>
                         <label>
-                          종료월 <small>선택</small>
+                          종료월
                           <input
                             type="month"
                             min={START_MONTH}
@@ -797,7 +858,7 @@ function App() {
                         </label>
                       </div>
                       <label>
-                        1회 저축액 <small>선택</small>
+                        1회 저축액
                         <input
                           inputMode="numeric"
                           value={form.deposit}
@@ -811,9 +872,7 @@ function App() {
                       </label>
                       <label>
                         {isTravelSavings(form.name) ? "여행 예산" : "목표금액"}{" "}
-                        <small>
-                          {isTravelSavings(form.name) ? "필수" : "선택"}
-                        </small>
+                        {isTravelSavings(form.name) && <small>필수</small>}
                         <input
                           inputMode="numeric"
                           value={form.target}
@@ -1155,7 +1214,7 @@ function SettingsPage({ settings, onSave, onResetPeriods, onResetTargets }) {
   );
 }
 
-function YearBlock({ year, months, categories, checks, onToggle }) {
+function YearBlock({ year, months, categories, checks, onToggle, onAssign }) {
   const total = months.reduce(
     (sum, month) =>
       sum +
@@ -1182,6 +1241,7 @@ function YearBlock({ year, months, categories, checks, onToggle }) {
             categories={categories}
             checks={checks}
             onToggle={onToggle}
+            onAssign={onAssign}
           />
         ))}
       </div>
@@ -1189,7 +1249,7 @@ function YearBlock({ year, months, categories, checks, onToggle }) {
   );
 }
 
-function MonthCard({ month, categories, checks, onToggle, compact = false }) {
+function MonthCard({ month, categories, checks, onToggle, onAssign, compact = false }) {
   const scheduled = categories.filter((category) =>
     isScheduled(category, month),
   );
@@ -1200,7 +1260,15 @@ function MonthCard({ month, categories, checks, onToggle, compact = false }) {
     0,
   );
   return (
-    <article className={`month-card ${compact ? "compact" : ""}`}>
+    <article
+      className={`month-card ${compact ? "compact" : ""} ${onAssign ? "drop-target" : ""}`}
+      onDragOver={onAssign ? (event) => event.preventDefault() : undefined}
+      onDrop={onAssign ? (event) => {
+        event.preventDefault();
+        const categoryId = event.dataTransfer.getData("text/save-me-category");
+        if (categoryId) onAssign(categoryId, month);
+      } : undefined}
+    >
       <div className="month-card-heading">
         <div>
           <span>{month.slice(0, 4)}</span>

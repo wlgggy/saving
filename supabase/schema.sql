@@ -19,10 +19,16 @@ create table if not exists public.save_me_shared_categories (
   end_month text not null,
   deposit_amount bigint not null default 0 check (deposit_amount >= 0),
   target_amount bigint not null default 0 check (target_amount >= 0),
+  manual_months text[] not null default '{}',
+  sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   check (start_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$'),
   check (end_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$')
 );
+
+alter table public.save_me_shared_categories
+  add column if not exists manual_months text[] not null default '{}',
+  add column if not exists sort_order integer not null default 0;
 
 create table if not exists public.save_me_shared_checks (
   category_id text not null,

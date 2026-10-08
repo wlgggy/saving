@@ -13,7 +13,7 @@ export async function loadPlanner(defaultSettings) {
   const client = requireSupabase()
   const [settingsResult, categoriesResult, checksResult, transactionsResult] = await Promise.all([
     client.from('save_me_shared_settings').select('*').eq('id', 'save-me-shared-planner').maybeSingle(),
-    client.from('save_me_shared_categories').select('*').order('created_at'),
+    client.from('save_me_shared_categories').select('*').order('sort_order').order('created_at'),
     client.from('save_me_shared_checks').select('*'),
     client.from('save_me_shared_travel_transactions').select('*').order('created_at', { ascending: false }),
   ])
@@ -46,6 +46,7 @@ export async function loadPlanner(defaultSettings) {
       end: category.end_month,
       deposit: Number(category.deposit_amount || 0),
       target: Number(category.target_amount || 0),
+      manualMonths: category.manual_months || [],
       travel: category.name.includes('여행적금')
         ? { budget: Number(category.target_amount || 0), deposits: depositsByCategory[category.id] || [] }
         : undefined,
@@ -85,7 +86,7 @@ export async function savePlanner(state) {
   }
   if (state.categories.length) {
     const categoryResult = await client.from('save_me_shared_categories').upsert(
-      state.categories.map((category) => ({
+      state.categories.map((category, index) => ({
         id: category.id,
         name: category.name,
         account_name: category.account || null,
@@ -93,6 +94,8 @@ export async function savePlanner(state) {
         end_month: category.end,
         deposit_amount: Number(category.deposit || 0),
         target_amount: Number(category.target || 0),
+        manual_months: category.manualMonths || [],
+        sort_order: index,
       })),
       { onConflict: 'id' },
     )
