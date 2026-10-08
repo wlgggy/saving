@@ -22,7 +22,7 @@ const makeMonths = (start = START_MONTH, end = END_MONTH) => {
 
 const PLAN_MONTHS = makeMonths()
 const YEAR_OPTIONS = [2026, 2027, 2028, 2029, 2030]
-const emptyForm = { name: '', account: '', start: '', end: '', deposit: '', target: '', type: 'regular' }
+const emptyForm = { name: '', account: '', start: '', end: '', deposit: '', target: '' }
 const DEFAULT_SETTINGS = { nickname: 'coco', bio: '오늘도 귀엽게 저축하는 중 .ᐟ', profileImage: '', spotifyUrl: 'https://open.spotify.com/track/2Lqdqm1ql2AWdEgLjwirN4?si=94058eaad1d8490f' }
 
 const defaultCategories = () => [
@@ -41,6 +41,7 @@ const currentMonth = () => {
 const isScheduled = (category, month) => month >= (category.start || START_MONTH) && month <= (category.end || END_MONTH)
 const checkKey = (categoryId, month) => `${categoryId}:${month}`
 const formatMoney = (value) => money.format(Number(value || 0))
+const isTravelSavings = (name) => name.includes('여행적금')
 const spotifyEmbedUrl = (url) => {
   const trackId = url?.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/)?.[1]
   return `https://open.spotify.com/embed/track/${trackId || '2Lqdqm1ql2AWdEgLjwirN4'}?utm_source=generator`
@@ -85,7 +86,7 @@ function App() {
   }, 0), [savings])
 
   const overallProgress = allScheduledTotal ? Math.round((checkedTotal / allScheduledTotal) * 100) : 0
-  const travelCategories = useMemo(() => savings.categories.filter((category) => category.type === 'travel'), [savings.categories])
+  const travelCategories = useMemo(() => savings.categories.filter((category) => isTravelSavings(category.name)), [savings.categories])
   const activeTravel = travelCategories.find((category) => category.id === activeTravelId)
 
   const visibleMonths = useMemo(() => {
@@ -124,7 +125,6 @@ function App() {
       end: category.end === END_MONTH ? '' : category.end,
       deposit: String(category.deposit),
       target: category.target ? String(category.target) : '',
-      type: category.type || 'regular',
     })
     setFormError('')
     setModalOpen(true)
@@ -138,7 +138,7 @@ function App() {
     if (!Number.isFinite(deposit) || deposit < 0) return setFormError('1회 저축액을 다시 확인해 주세요.')
     if (form.target && (!Number.isFinite(target) || target < 0)) return setFormError('목표금액을 다시 확인해 주세요.')
     if (form.start && form.end && form.start > form.end) return setFormError('시작월은 종료월보다 앞서야 해요.')
-    if (form.type === 'travel' && (!Number.isFinite(target) || target <= 0)) return setFormError('여행 예산을 입력해 주세요.')
+    if (isTravelSavings(form.name) && (!Number.isFinite(target) || target <= 0)) return setFormError('여행 예산을 입력해 주세요.')
 
     const category = {
       id: editingId || `category-${Date.now()}`,
@@ -148,8 +148,7 @@ function App() {
       end: form.end || END_MONTH,
       deposit,
       target,
-      type: form.type,
-      travel: form.type === 'travel'
+      travel: isTravelSavings(form.name)
         ? { budget: target, deposits: editingId ? (savings.categories.find((item) => item.id === editingId)?.travel?.deposits || []) : [] }
         : undefined,
     }
@@ -178,12 +177,15 @@ function App() {
 
   const addTravelDeposit = (categoryId, input) => {
     const amount = Number(input.amount.replaceAll(',', ''))
-    if (!Number.isFinite(amount) || amount <= 0) return '입금액을 0원보다 크게 입력해 주세요.'
+    if (!Number.isFinite(amount) || amount <= 0) return '금액을 0원보다 크게 입력해 주세요.'
+    const category = savings.categories.find((item) => item.id === categoryId)
+    const currentSaved = (category?.travel?.deposits || []).reduce((total, deposit) => total + (deposit.kind === 'withdrawal' ? -deposit.amount : deposit.amount), 0)
+    if (input.kind === 'withdrawal' && amount > currentSaved) return '현재 모은 금액보다 큰 출금액은 기록할 수 없어요.'
     setSavings((previous) => ({
       ...previous,
       categories: previous.categories.map((category) => category.id === categoryId ? {
         ...category,
-        travel: { ...category.travel, deposits: [{ id: `travel-deposit-${Date.now()}`, date: input.date, amount, memo: input.memo.trim() }, ...(category.travel?.deposits || [])] },
+        travel: { ...category.travel, deposits: [{ id: `travel-deposit-${Date.now()}`, date: input.date, amount, kind: input.kind, memo: input.memo.trim() }, ...(category.travel?.deposits || [])] },
       } : category),
     }))
     return ''
@@ -304,12 +306,11 @@ function App() {
           <button className="close-button" onClick={() => setModalOpen(false)} aria-label="닫기">×</button>
           <div className="modal-titlebar"><h2 id="modal-title">{editingId ? '카테고리 편집' : '새 카테고리 만들기'}</h2></div>
           <form onSubmit={submitCategory}>
-            <label>카테고리 유형<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}><option value="regular">일반 저축</option><option value="travel">여행적금</option></select></label>
             <label>항목명 <b>필수</b><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="예: 여행 적금" autoFocus /></label>
             <label>계좌번호 또는 상품명<input value={form.account} onChange={(event) => setForm({ ...form, account: event.target.value })} placeholder="예: 카카오뱅크 세이프박스" /></label>
             <div className="form-row"><label>시작월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>종료월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div>
             <label>1회 저축액 <small>선택</small><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: event.target.value })} placeholder="예: 100000" /></label>
-            <label>{form.type === 'travel' ? '여행 예산' : '목표금액'} <small>{form.type === 'travel' ? '필수' : '선택'}</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} placeholder="예: 3000000" /></label>
+            <label>{isTravelSavings(form.name) ? '여행 예산' : '목표금액'} <small>{isTravelSavings(form.name) ? '필수' : '선택'}</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} placeholder="예: 3000000" /></label>
             {formError && <p className="form-error">✦ {formError}</p>}
             <div className="modal-actions">{editingId && <button type="button" className="delete-button" onClick={() => deleteCategory(editingId)}>삭제</button>}<button type="submit" className="save-button">{editingId ? '저장하기' : '카테고리 추가'}</button></div>
           </form>
@@ -323,11 +324,11 @@ function App() {
 }
 
 function TravelSavingsPage({ category, onBack, onAddDeposit, onRemoveDeposit }) {
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), amount: '', memo: '' })
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), amount: '', memo: '', kind: 'deposit' })
   const [error, setError] = useState('')
   const deposits = category.travel?.deposits || []
   const budget = Number(category.travel?.budget || category.target || 0)
-  const saved = deposits.reduce((total, deposit) => total + Number(deposit.amount), 0)
+  const saved = deposits.reduce((total, deposit) => total + (deposit.kind === 'withdrawal' ? -Number(deposit.amount) : Number(deposit.amount)), 0)
   const remaining = Math.max(0, budget - saved)
   const progress = budget ? Math.min(100, Math.round((saved / budget) * 100)) : 0
   const submit = (event) => {
@@ -335,13 +336,13 @@ function TravelSavingsPage({ category, onBack, onAddDeposit, onRemoveDeposit }) 
     const result = onAddDeposit(category.id, form)
     if (result) return setError(result)
     setError('')
-    setForm({ date: new Date().toISOString().slice(0, 10), amount: '', memo: '' })
+    setForm({ date: new Date().toISOString().slice(0, 10), amount: '', memo: '', kind: 'deposit' })
   }
 
   return <section className="travel-page">
     <header className="travel-page-header"><div><button className="back-button" onClick={onBack}>← 대시보드</button><p className="eyebrow">TRAVEL SAVINGS PAGE</p><h1>{category.name} <em>여행적금</em></h1><p>여행을 향해 오늘도 한 칸 더 가까이.</p></div></header>
     <section className="travel-summary"><article className="travel-progress"><span>여행 예산 {formatMoney(budget)}</span><strong>{formatMoney(saved)}</strong><p>현재까지 모은 금액</p><div className="progress-track"><i style={{ width: `${progress}%` }} /></div><b>{progress}% complete</b></article><article className="travel-remaining"><span>남은 금액</span><strong>{formatMoney(remaining)}</strong><p>{remaining === 0 ? '목표 달성! 여행 갈 준비 끝 ✦' : '다음 입금으로 조금 더 가까워져요.'}</p></article></section>
-    <section className="travel-grid"><article className="travel-panel"><div className="travel-panel-title"><h2>＋ 입금 기록하기</h2><span>NEW DEPOSIT</span></div><form className="travel-deposit-form" onSubmit={submit}><label>입금 날짜<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label>입금액<input inputMode="numeric" placeholder="예: 100000" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label><label>메모 <small>선택</small><input placeholder="예: 월급날 적금" value={form.memo} onChange={(event) => setForm({ ...form, memo: event.target.value })} /></label>{error && <p className="form-error">✦ {error}</p>}<button className="save-button" type="submit">입금 기록 추가</button></form></article><article className="travel-panel"><div className="travel-panel-title"><h2>▤ 입금 히스토리</h2><span>{deposits.length} records</span></div>{deposits.length ? <div className="travel-deposit-list">{deposits.map((deposit) => <div className="travel-deposit-row" key={deposit.id}><div><strong>{deposit.date}</strong><span>{deposit.memo || '저축 기록'}</span></div><b>+ {formatMoney(deposit.amount)}</b><button onClick={() => onRemoveDeposit(category.id, deposit.id)} aria-label="입금 기록 삭제">×</button></div>)}</div> : <p className="travel-empty">아직 입금 기록이 없어요.<br />첫 저축을 추가해 볼까요?</p>}</article></section>
+    <section className="travel-grid"><article className="travel-panel"><div className="travel-panel-title"><h2>＋ 입출금 기록하기</h2><span>NEW TRANSACTION</span></div><form className="travel-deposit-form" onSubmit={submit}><label>구분<select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}><option value="deposit">입금</option><option value="withdrawal">출금</option></select></label><label>기록 날짜<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label>{form.kind === 'withdrawal' ? '출금액' : '입금액'}<input inputMode="numeric" placeholder="예: 100000" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label><label>메모 <small>선택</small><input placeholder={form.kind === 'withdrawal' ? '예: 여행 예약금 결제' : '예: 월급날 적금'} value={form.memo} onChange={(event) => setForm({ ...form, memo: event.target.value })} /></label>{error && <p className="form-error">✦ {error}</p>}<button className="save-button" type="submit">{form.kind === 'withdrawal' ? '출금 기록 추가' : '입금 기록 추가'}</button></form></article><article className="travel-panel"><div className="travel-panel-title"><h2>▤ 입출금 히스토리</h2><span>{deposits.length} records</span></div>{deposits.length ? <div className="travel-deposit-list">{deposits.map((deposit) => <div className={`travel-deposit-row ${deposit.kind === 'withdrawal' ? 'withdrawal' : ''}`} key={deposit.id}><div><strong>{deposit.date}</strong><span>{deposit.memo || (deposit.kind === 'withdrawal' ? '출금 기록' : '입금 기록')}</span></div><b>{deposit.kind === 'withdrawal' ? '− ' : '+ '}{formatMoney(deposit.amount)}</b><button onClick={() => onRemoveDeposit(category.id, deposit.id)} aria-label="입출금 기록 삭제">×</button></div>)}</div> : <p className="travel-empty">아직 입출금 기록이 없어요.<br />첫 저축을 추가해 볼까요?</p>}</article></section>
   </section>
 }
 
