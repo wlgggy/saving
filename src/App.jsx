@@ -3,10 +3,7 @@ import profileFrog from "./assets/profile-frog.png";
 import pixelAngelWingLeft from "./assets/pixel-angel-wing-left.png";
 import pixelClouds from "./assets/pixel-clouds.png";
 import { isSupabaseConfigured } from "./lib/supabase";
-import {
-  loadPlanner,
-  savePlanner,
-} from "./lib/plannerRepository";
+import { loadPlanner, savePlanner } from "./lib/plannerRepository";
 
 const START_MONTH = "2026-01";
 const END_MONTH = "2030-12";
@@ -315,6 +312,7 @@ function App() {
   const deleteCategory = (id) => {
     if (!window.confirm("이 카테고리와 체크 기록을 지울까요?")) return;
     setSavings((previous) => ({
+      ...previous,
       categories: previous.categories.filter((category) => category.id !== id),
       checks: Object.fromEntries(
         Object.entries(previous.checks).filter(
@@ -694,7 +692,7 @@ function App() {
                           onClick={() => openEdit(category)}
                           aria-label={`${category.name} 편집`}
                         >
-                          ＊
+                          -
                         </button>
                         <span className="category-orb">
                           {index === 0 ? "✦" : index === 1 ? "♥" : "☻"}
