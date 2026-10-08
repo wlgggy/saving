@@ -36,6 +36,7 @@ const emptyForm = {
   account: "",
   start: "",
   end: "",
+  travelDate: "",
   deposit: "",
   target: "",
   menuPage: false,
@@ -267,6 +268,7 @@ function App() {
       account: category.account || "",
       start: category.start === START_MONTH ? "" : category.start,
       end: category.end === END_MONTH ? "" : category.end,
+      travelDate: category.travelDate || "",
       deposit: category.deposit
         ? formatAmountInput(String(category.deposit))
         : "",
@@ -279,14 +281,19 @@ function App() {
 
   const submitCategory = (event) => {
     event.preventDefault();
-    const deposit = form.deposit ? Number(form.deposit.replaceAll(",", "")) : 0;
+    const isTravelGoal = isTravelGoalName(form.name);
+    const deposit = isTravelGoal
+      ? 0
+      : form.deposit
+        ? Number(form.deposit.replaceAll(",", ""))
+        : 0;
     const target = form.target ? Number(form.target.replaceAll(",", "")) : "";
     if (!form.name.trim()) return setFormError("항목명은 꼭 입력해 주세요.");
-    if (!Number.isFinite(deposit) || deposit < 0)
+    if (!isTravelGoal && (!Number.isFinite(deposit) || deposit < 0))
       return setFormError("1회 저축액을 다시 확인해 주세요.");
     if (form.target && (!Number.isFinite(target) || target < 0))
       return setFormError("목표금액을 다시 확인해 주세요.");
-    if (form.start && form.end && form.start > form.end)
+    if (!isTravelGoal && form.start && form.end && form.start > form.end)
       return setFormError("시작월은 종료월보다 앞서야 해요.");
     if (form.menuPage && (!Number.isFinite(target) || target <= 0))
       return setFormError(
@@ -299,8 +306,9 @@ function App() {
       id: editingId || `category-${Date.now()}`,
       name: form.name.trim(),
       account: form.account.trim(),
-      start: form.start,
-      end: form.end,
+      start: isTravelGoal ? "" : form.start,
+      end: isTravelGoal ? "" : form.end,
+      travelDate: isTravelGoal ? form.travelDate : "",
       deposit,
       target,
       manualMonths: editingId
@@ -855,37 +863,56 @@ function App() {
                           }
                         />
                       </label>
-                      <div className="form-row">
+                      {isTravelGoalName(form.name) ? (
                         <label>
-                          시작월
+                          여행일자
                           <input
-                            type="month"
-                            min={START_MONTH}
-                            max={END_MONTH}
-                            value={form.start}
+                            type="date"
+                            value={form.travelDate}
                             onChange={(event) =>
-                              setForm({ ...form, start: event.target.value })
+                              setForm({ ...form, travelDate: event.target.value })
                             }
                           />
                         </label>
-                        <label>
-                          종료월
-                          <input
-                            type="month"
-                            min={START_MONTH}
-                            max={END_MONTH}
-                            value={form.end}
-                            onChange={(event) =>
-                              setForm({ ...form, end: event.target.value })
-                            }
-                          />
-                        </label>
-                      </div>
-                      <label>
+                      ) : (
+                        <div className="form-row">
+                          <label>
+                            시작월
+                            <input
+                              type="month"
+                              min={START_MONTH}
+                              max={END_MONTH}
+                              value={form.start}
+                              onChange={(event) =>
+                                setForm({ ...form, start: event.target.value })
+                              }
+                            />
+                          </label>
+                          <label>
+                            종료월
+                            <input
+                              type="month"
+                              min={START_MONTH}
+                              max={END_MONTH}
+                              value={form.end}
+                              onChange={(event) =>
+                                setForm({ ...form, end: event.target.value })
+                              }
+                            />
+                          </label>
+                        </div>
+                      )}
+                      <label className={isTravelGoalName(form.name) ? "disabled-field" : ""}>
                         1회 저축액
                         <input
                           inputMode="numeric"
-                          value={form.deposit}
+                          value={isTravelGoalName(form.name) ? "" : form.deposit}
+                          disabled={isTravelGoalName(form.name)}
+                          placeholder={
+                            isTravelGoalName(form.name)
+                              ? "입출금 기록으로 관리"
+                              : undefined
+                          }
                           onChange={(event) =>
                             setForm({
                               ...form,

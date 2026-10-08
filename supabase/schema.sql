@@ -15,13 +15,14 @@ create table if not exists public.save_me_shared_categories (
   id text primary key,
   name text not null,
   account_name text,
-  start_month text not null,
-  end_month text not null,
+  start_month text,
+  end_month text,
   deposit_amount bigint not null default 0 check (deposit_amount >= 0),
   target_amount bigint not null default 0 check (target_amount >= 0),
   manual_months text[] not null default '{}',
   sort_order integer not null default 0,
   menu_page boolean not null default false,
+  travel_date date,
   created_at timestamptz not null default now(),
   check (start_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$'),
   check (end_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$')
@@ -30,7 +31,16 @@ create table if not exists public.save_me_shared_categories (
 alter table public.save_me_shared_categories
   add column if not exists manual_months text[] not null default '{}',
   add column if not exists sort_order integer not null default 0,
-  add column if not exists menu_page boolean not null default false;
+  add column if not exists menu_page boolean not null default false,
+  add column if not exists travel_date date;
+
+alter table public.save_me_shared_categories
+  alter column start_month drop not null,
+  alter column end_month drop not null,
+  drop constraint if exists save_me_shared_categories_start_month_check,
+  drop constraint if exists save_me_shared_categories_end_month_check,
+  add constraint save_me_shared_categories_start_month_check check (start_month is null or start_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$'),
+  add constraint save_me_shared_categories_end_month_check check (end_month is null or end_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$');
 
 update public.save_me_shared_categories
 set menu_page = true

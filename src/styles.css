@@ -132,3 +132,5 @@ body { background:#92d9ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 
 .travel-deposit-form select { width:100%; padding:8px; border:1px solid #9bc9eb; border-radius:9px; outline-color:#f076b0; background:#fff; box-shadow:inset 1px 1px #b9dff5; font-size:11px; }
 .travel-deposit-row.withdrawal b { color:#6d9ec3; }
+.category-modal input:disabled { cursor:not-allowed; color:#8aaecb; background:#e8f5fb; }
+.category-modal .disabled-field { opacity:.76; }
