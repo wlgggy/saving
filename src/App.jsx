@@ -549,7 +549,7 @@ function App() {
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
-                <span>✈</span> {displayTravelName(category.name)}
+                <span>{isTravelGoalName(category.name) ? "✈" : "💰"}</span> {displayTravelName(category.name)}
               </button>
             ))}
             <button
