@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import profileFrog from './assets/profile-frog.png'
 
 const START_MONTH = '2026-01'
 const END_MONTH = '2030-12'
@@ -173,12 +174,25 @@ function App() {
         <div className="window-titlebar"><span>₩ SAVE ME.exe — 저축 관리 프로그램</span><div className="window-controls" aria-hidden="true"><i>_</i><i>□</i><i>×</i></div></div>
         <aside className="sidebar">
           <div className="brand"><b>₩</b><span>MY 저축 플래너</span></div>
-          <div className="sidebar-mascot"><span>✦</span><b>Save<br />with me!</b></div>
+          <section className="profile-card" aria-label="프로필">
+            <img src={profileFrog} alt="노란 모자를 쓴 초록색 캐릭터 프로필" />
+            <div><strong>coco</strong><span>saving archive ★</span></div>
+            <p>오늘도 귀엽게<br />저축하는 중 .ᐟ</p>
+          </section>
           <nav aria-label="저축 메뉴">
             <button className="nav-item active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>▣</span> 대시보드</button>
             <button className="nav-item" onClick={() => document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' })}><span>☑</span> 저축 체크</button>
             <button className="nav-item" onClick={() => document.querySelector('.categories-section')?.scrollIntoView({ behavior: 'smooth' })}><span>▤</span> 내 목표</button>
           </nav>
+          <section className="music-card" aria-label="지금 듣는 노래">
+            <p>NOW PLAYING ♫</p>
+            <iframe
+              title="Spotify track player"
+              src="https://open.spotify.com/embed/track/2Lqdqm1ql2AWdEgLjwirN4?utm_source=generator"
+              loading="lazy"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            />
+          </section>
           <div className="sidebar-bottom"><small>저장 위치</small><b>이 브라우저</b><span>● 자동 저장 중</span></div>
         </aside>
     <main className="app-shell">
