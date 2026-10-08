@@ -1002,7 +1002,7 @@ function TravelSavingsPage({
         : Number(deposit.amount)),
     0,
   );
-  const remaining = Math.max(0, budget - netSaved);
+  const remaining = netSaved;
   const progress = budget
     ? Math.min(100, Math.round((deposited / budget) * 100))
     : 0;
