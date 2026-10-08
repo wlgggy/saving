@@ -261,7 +261,7 @@ function App() {
       {isModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={() => setModalOpen(false)}>
         <section className="category-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}>
           <button className="close-button" onClick={() => setModalOpen(false)} aria-label="닫기">×</button>
-          <p className="eyebrow">MY NEW POCKET</p><h2 id="modal-title">{editingId ? '카테고리 편집' : '새 카테고리 만들기'}</h2>
+          <div className="modal-titlebar"><h2 id="modal-title">{editingId ? '카테고리 편집' : '새 카테고리 만들기'}</h2></div>
           <form onSubmit={submitCategory}>
             <label>항목명 <b>필수</b><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="예: 여행 적금" autoFocus /></label>
             <label>계좌번호 또는 상품명<input value={form.account} onChange={(event) => setForm({ ...form, account: event.target.value })} placeholder="예: 카카오뱅크 세이프박스" /></label>
