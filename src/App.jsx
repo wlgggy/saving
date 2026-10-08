@@ -4,7 +4,6 @@ import pixelAngelWingLeft from "./assets/pixel-angel-wing-left.png";
 import pixelClouds from "./assets/pixel-clouds.png";
 import { isSupabaseConfigured } from "./lib/supabase";
 import {
-  ensurePlannerSession,
   loadPlanner,
   savePlanner,
 } from "./lib/plannerRepository";
@@ -150,7 +149,6 @@ function App() {
 
     const loadCloudState = async () => {
       try {
-        await ensurePlannerSession();
         const cloudSavings = await loadPlanner(DEFAULT_SETTINGS);
         if (cloudSavings && active) setSavings(normalizeSavings(cloudSavings));
         if (active) {

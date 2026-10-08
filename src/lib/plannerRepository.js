@@ -9,24 +9,13 @@ const throwOnError = (error) => {
   if (error) throw new Error(error.message)
 }
 
-export async function ensurePlannerSession() {
-  const client = requireSupabase()
-  const { data: sessionData, error: sessionError } = await client.auth.getSession()
-  throwOnError(sessionError)
-  if (sessionData.session) return sessionData.session
-
-  const { data, error } = await client.auth.signInAnonymously()
-  throwOnError(error)
-  return data.session
-}
-
 export async function loadPlanner(defaultSettings) {
   const client = requireSupabase()
   const [settingsResult, categoriesResult, checksResult, transactionsResult] = await Promise.all([
-    client.from('save_me_settings').select('*').maybeSingle(),
-    client.from('save_me_categories').select('*').order('created_at'),
-    client.from('save_me_checks').select('*'),
-    client.from('save_me_travel_transactions').select('*').order('created_at', { ascending: false }),
+    client.from('save_me_shared_settings').select('*').eq('id', 'save-me-shared-planner').maybeSingle(),
+    client.from('save_me_shared_categories').select('*').order('created_at'),
+    client.from('save_me_shared_checks').select('*'),
+    client.from('save_me_shared_travel_transactions').select('*').order('created_at', { ascending: false }),
   ])
   ;[settingsResult, categoriesResult, checksResult, transactionsResult].forEach(({ error }) => throwOnError(error))
 
@@ -76,13 +65,8 @@ export async function loadPlanner(defaultSettings) {
 
 export async function savePlanner(state) {
   const client = requireSupabase()
-  const { data: userData, error: userError } = await client.auth.getUser()
-  throwOnError(userError)
-  if (!userData.user) throw new Error('No authenticated Supabase user.')
-  const userId = userData.user.id
-
-  const settingsResult = await client.from('save_me_settings').upsert({
-    user_id: userId,
+  const settingsResult = await client.from('save_me_shared_settings').upsert({
+    id: 'save-me-shared-planner',
     nickname: state.settings.nickname || 'coco',
     bio: state.settings.bio || '',
     profile_image: state.settings.profileImage || null,
@@ -92,17 +76,16 @@ export async function savePlanner(state) {
   throwOnError(settingsResult.error)
 
   const categoryIds = state.categories.map((category) => category.id)
-  const existingCategoriesResult = await client.from('save_me_categories').select('id')
+  const existingCategoriesResult = await client.from('save_me_shared_categories').select('id')
   throwOnError(existingCategoriesResult.error)
   const removedIds = (existingCategoriesResult.data || []).map((category) => category.id).filter((id) => !categoryIds.includes(id))
   if (removedIds.length) {
-    const removeResult = await client.from('save_me_categories').delete().in('id', removedIds)
+    const removeResult = await client.from('save_me_shared_categories').delete().in('id', removedIds)
     throwOnError(removeResult.error)
   }
   if (state.categories.length) {
-    const categoryResult = await client.from('save_me_categories').upsert(
+    const categoryResult = await client.from('save_me_shared_categories').upsert(
       state.categories.map((category) => ({
-        user_id: userId,
         id: category.id,
         name: category.name,
         account_name: category.account || null,
@@ -111,28 +94,27 @@ export async function savePlanner(state) {
         deposit_amount: Number(category.deposit || 0),
         target_amount: Number(category.target || 0),
       })),
-      { onConflict: 'user_id,id' },
+      { onConflict: 'id' },
     )
     throwOnError(categoryResult.error)
   }
 
-  const clearChecksResult = await client.from('save_me_checks').delete().eq('user_id', userId)
+  const clearChecksResult = await client.from('save_me_shared_checks').delete().neq('category_id', '')
   throwOnError(clearChecksResult.error)
   const checkedRows = Object.entries(state.checks)
     .filter(([, checked]) => checked)
     .map(([key]) => {
       const [categoryId, savingsMonth] = key.split(':')
-      return { user_id: userId, category_id: categoryId, savings_month: savingsMonth, is_checked: true }
+      return { category_id: categoryId, savings_month: savingsMonth, is_checked: true }
     })
   if (checkedRows.length) {
-    const checksResult = await client.from('save_me_checks').insert(checkedRows)
+    const checksResult = await client.from('save_me_shared_checks').insert(checkedRows)
     throwOnError(checksResult.error)
   }
 
-  const clearTransactionsResult = await client.from('save_me_travel_transactions').delete().eq('user_id', userId)
+  const clearTransactionsResult = await client.from('save_me_shared_travel_transactions').delete().neq('id', '')
   throwOnError(clearTransactionsResult.error)
   const transactionRows = state.categories.flatMap((category) => (category.travel?.deposits || []).map((deposit) => ({
-    user_id: userId,
     id: deposit.id,
     category_id: category.id,
     transaction_date: deposit.date,
@@ -141,7 +123,7 @@ export async function savePlanner(state) {
     memo: deposit.memo || null,
   })))
   if (transactionRows.length) {
-    const transactionsResult = await client.from('save_me_travel_transactions').insert(transactionRows)
+    const transactionsResult = await client.from('save_me_shared_travel_transactions').insert(transactionRows)
     throwOnError(transactionsResult.error)
   }
 }
