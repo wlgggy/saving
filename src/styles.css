@@ -50,3 +50,37 @@ body { background:#92d9ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 /* Mini-blog profile and music player */
 .profile-card { display:grid; grid-template-columns:54px 1fr; gap:7px 9px; margin:2px 1px 13px; padding:8px; border:1px solid #80b9e7; border-radius:13px; background:linear-gradient(145deg,#fff,#def7ff); box-shadow:inset 1px 1px #fff, 2px 3px #73b7e6; color:#5596d4; }.profile-card img { grid-row:span 2; width:54px; height:54px; object-fit:cover; border:2px solid #fff; border-radius:11px; box-shadow:0 0 0 1px #6daee4; }.profile-card strong { display:block; margin-top:3px; color:#357dc5; font-size:13px; }.profile-card span { display:block; margin-top:2px; color:#ef78b5; font-size:8px; }.profile-card p { grid-column:1 / -1; margin:0; padding-top:6px; border-top:1px dashed #9ac8ec; color:#6298c4; font-size:9px; line-height:1.45; }.music-card { margin-top:12px; overflow:hidden; border:1px solid #80b9e7; border-radius:11px; background:#f4fcff; box-shadow:inset 1px 1px #fff, 2px 3px #73b7e6; }.music-card p { margin:0; padding:7px 8px; color:#fff; background:linear-gradient(90deg,#7dc0f5,#a9e6ff); font-size:8px; font-weight:700; text-shadow:1px 1px #5496cf; }.music-card iframe { display:block; width:100%; height:152px; border:0; }
 @media (max-width:920px) { .profile-card,.music-card { display:none; } }
+
+/* iPhone 16 Pro and similarly narrow phone screens */
+@media (max-width:620px) {
+  .window-titlebar { height:30px; font-size:10px; }
+  .sidebar { display:grid; grid-template-columns:1fr; gap:8px; padding:10px; border-right:0; border-bottom:1px solid #72afe5; }
+  .brand { display:none; }
+  .profile-card { display:grid; grid-template-columns:66px 1fr; margin:0; padding:8px; }
+  .profile-card img { width:66px; height:66px; }
+  .profile-card strong { font-size:14px; }
+  .profile-card p { display:none; }
+  .sidebar nav { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+  .nav-item { min-height:35px; padding:5px 3px; border:1px solid #9dcaea; border-radius:9px; background:#f8feff; font-size:9px; text-align:center; }
+  .nav-item span { display:block; width:auto; margin-bottom:2px; font-size:12px; }
+  .nav-item.active { border-color:#fff; background:linear-gradient(#9fd7ff,#65aef0); }
+  .music-card { display:block; margin:0; }
+  .music-card iframe { height:80px; }
+  .sidebar-bottom { display:none; }
+  .app-shell { padding:12px 8px 36px; }
+  .hero h1 { font-size:19px; }
+  .hero-copy { font-size:9px; }
+  .summary-card { min-height:79px; padding:11px; }
+  .summary-card strong { margin:7px 0 5px; font-size:15px; }
+  .planner-header,.section-title { padding:8px 9px; }
+  .planner-header h2,.section-title h2 { font-size:11px; }
+  .view-switcher button { padding:5px 7px; font-size:9px; }
+  .date-control { padding:9px; }
+  .month-card { padding:10px; }
+  .category-grid { grid-template-columns:1fr 1fr; }
+}
+
+@media (min-width:390px) and (max-width:430px) and (min-height:800px) {
+  .retro-desktop { min-height:874px; }
+  .music-card iframe { height:92px; }
+}
