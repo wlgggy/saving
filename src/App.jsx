@@ -214,7 +214,7 @@ function App() {
 
   return (
     <div className="retro-desktop">
-      <div className="desktop-decor decor-cloud">☁</div>
+      <div className="cloud-decoration" aria-hidden="true"><i /><i /><i /><b>✦</b><b>✧</b></div>
       <div className="desktop-decor decor-star">★</div>
       <img className="pixel-wing pixel-wing-left" src={pixelAngelWingLeft} alt="" aria-hidden="true" />
       <img className="pixel-wing pixel-wing-right" src={pixelAngelWingLeft} alt="" aria-hidden="true" />
