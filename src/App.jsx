@@ -549,7 +549,8 @@ function App() {
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
-                <span>{isTravelGoalName(category.name) ? "✈" : "₩"}</span> {displayTravelName(category.name)}
+                <span>{isTravelGoalName(category.name) ? "✈" : "₩"}</span>{" "}
+                {displayTravelName(category.name)}
               </button>
             ))}
             <button
@@ -783,7 +784,7 @@ function App() {
                           -
                         </button>
                         <span className="category-orb">
-                          {index === 0 ? "✦" : index === 1 ? "♥" : "☻"}
+                          {isTravelGoalName(category.name) ? "✈" : "★"}
                         </span>
                         <h3>{category.name}</h3>
                         <p>{category.account || "연결된 계좌/상품 없음"}</p>
