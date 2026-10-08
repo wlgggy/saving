@@ -94,6 +94,7 @@ const isScheduled = (category, month) => {
 const checkKey = (categoryId, month) => `${categoryId}:${month}`;
 const formatMoney = (value) => money.format(Number(value || 0));
 const isMenuCategory = (category) => Boolean(category.menuPage);
+const isTravelGoalName = (name) => name.includes("여행적금");
 const displayTravelName = (name) => name || "여행";
 const formatAmountInput = (value) =>
   value.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -217,13 +218,11 @@ function App() {
 
   const overallProgress = Math.round((checkedTotal / FIXED_PLAN_TOTAL) * 100);
   const travelCategories = useMemo(
-    () =>
-      savings.categories.filter((category) => isMenuCategory(category)),
+    () => savings.categories.filter((category) => isMenuCategory(category)),
     [savings.categories],
   );
   const checklistCategories = useMemo(
-    () =>
-      savings.categories.filter((category) => !isMenuCategory(category)),
+    () => savings.categories.filter((category) => !isMenuCategory(category)),
     [savings.categories],
   );
   const activeTravel = travelCategories.find(
@@ -290,7 +289,11 @@ function App() {
     if (form.start && form.end && form.start > form.end)
       return setFormError("시작월은 종료월보다 앞서야 해요.");
     if (form.menuPage && (!Number.isFinite(target) || target <= 0))
-      return setFormError("여행 예산을 입력해 주세요.");
+      return setFormError(
+        isTravelGoalName(form.name)
+          ? "여행 예산을 입력해 주세요."
+          : "목표 금액을 입력해 주세요.",
+      );
 
     const category = {
       id: editingId || `category-${Date.now()}`,
@@ -301,7 +304,8 @@ function App() {
       deposit,
       target,
       manualMonths: editingId
-        ? savings.categories.find((item) => item.id === editingId)?.manualMonths || []
+        ? savings.categories.find((item) => item.id === editingId)
+            ?.manualMonths || []
         : [],
       menuPage: form.menuPage,
       travel: form.menuPage
@@ -341,11 +345,17 @@ function App() {
 
   const moveCategory = (id, direction) => {
     setSavings((previous) => {
-      const fromIndex = previous.categories.findIndex((category) => category.id === id);
+      const fromIndex = previous.categories.findIndex(
+        (category) => category.id === id,
+      );
       const toIndex = fromIndex + direction;
-      if (fromIndex < 0 || toIndex < 0 || toIndex >= previous.categories.length) return previous;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= previous.categories.length)
+        return previous;
       const categories = [...previous.categories];
-      [categories[fromIndex], categories[toIndex]] = [categories[toIndex], categories[fromIndex]];
+      [categories[fromIndex], categories[toIndex]] = [
+        categories[toIndex],
+        categories[fromIndex],
+      ];
       return { ...previous, categories };
     });
   };
@@ -354,8 +364,16 @@ function App() {
     setSavings((previous) => ({
       ...previous,
       categories: previous.categories.map((category) => {
-        if (category.id !== categoryId || !isPeriodFree(category) || category.manualMonths?.includes(month)) return category;
-        return { ...category, manualMonths: [...(category.manualMonths || []), month] };
+        if (
+          category.id !== categoryId ||
+          !isPeriodFree(category) ||
+          category.manualMonths?.includes(month)
+        )
+          return category;
+        return {
+          ...category,
+          manualMonths: [...(category.manualMonths || []), month],
+        };
       }),
     }));
   };
@@ -730,10 +748,16 @@ function App() {
                         onDragStart={(event) => {
                           if (!periodFree) return;
                           event.dataTransfer.effectAllowed = "copy";
-                          event.dataTransfer.setData("text/save-me-category", category.id);
+                          event.dataTransfer.setData(
+                            "text/save-me-category",
+                            category.id,
+                          );
                         }}
                       >
-                        <div className="category-order" aria-label="카테고리 순서">
+                        <div
+                          className="category-order"
+                          aria-label="카테고리 순서"
+                        >
                           <button
                             type="button"
                             onClick={() => moveCategory(category.id, -1)}
@@ -761,9 +785,7 @@ function App() {
                         <span className="category-orb">
                           {index === 0 ? "✦" : index === 1 ? "♥" : "☻"}
                         </span>
-                        <h3>
-                          {category.name}
-                        </h3>
+                        <h3>{category.name}</h3>
                         <p>{category.account || "연결된 계좌/상품 없음"}</p>
                         <strong>{formatMoney(saved)}</strong>
                         <small>
@@ -872,7 +894,11 @@ function App() {
                         />
                       </label>
                       <label>
-                        {form.menuPage ? "여행 예산" : "목표금액"}{" "}
+                        {form.menuPage
+                          ? isTravelGoalName(form.name)
+                            ? "여행 예산"
+                            : "목표금액"
+                          : "목표금액"}
                         {form.menuPage && <small>필수</small>}
                         <input
                           inputMode="numeric"
@@ -892,7 +918,10 @@ function App() {
                             type="checkbox"
                             checked={form.menuPage}
                             onChange={(event) =>
-                              setForm({ ...form, menuPage: event.target.checked })
+                              setForm({
+                                ...form,
+                                menuPage: event.target.checked,
+                              })
                             }
                           />
                           메뉴에 추가
@@ -934,11 +963,12 @@ function TravelSavingsPage({
     date: new Date().toISOString().slice(0, 10),
     amount: "",
     memo: "",
-    kind: "deposit",
+    kind: "",
   });
   const [error, setError] = useState("");
   const deposits = category.travel?.deposits || [];
   const budget = Number(category.travel?.budget || category.target || 0);
+  const isTravelGoal = isTravelGoalName(category.name);
   const saved = deposits.reduce(
     (total, deposit) =>
       total +
@@ -953,6 +983,7 @@ function TravelSavingsPage({
     : 0;
   const submit = (event) => {
     event.preventDefault();
+    if (!form.kind) return setError("입금 또는 출금을 선택해 주세요.");
     const result = onAddDeposit(category.id, form);
     if (result) return setError(result);
     setError("");
@@ -960,7 +991,7 @@ function TravelSavingsPage({
       date: new Date().toISOString().slice(0, 10),
       amount: "",
       memo: "",
-      kind: "deposit",
+      kind: "",
     });
   };
 
@@ -971,16 +1002,25 @@ function TravelSavingsPage({
           <button className="back-button" onClick={onBack}>
             ← 대시보드
           </button>
-          <p className="eyebrow">TRAVEL SAVINGS PAGE</p>
+          <p className="eyebrow">
+            {isTravelGoal ? "TRAVEL SAVINGS PAGE" : "SAVINGS PAGE"}
+          </p>
           <h1>
-            {displayTravelName(category.name)} <em>여행적금</em>
+            {displayTravelName(category.name)}{" "}
+            <em>{isTravelGoal ? "여행적금" : "저축 목표"}</em>
           </h1>
-          <p>여행을 향해 오늘도 한 칸 더 가까이.</p>
+          <p>
+            {isTravelGoal
+              ? "여행을 향해 오늘도 한 칸 더 가까이."
+              : "목표를 향해 오늘도 한 칸 더 가까이."}
+          </p>
         </div>
       </header>
       <section className="travel-summary">
         <article className="travel-progress">
-          <span>여행 예산 {formatMoney(budget)}</span>
+          <span>
+            {isTravelGoal ? "여행 예산" : "목표 금액"} {formatMoney(budget)}
+          </span>
           <strong>{formatMoney(saved)}</strong>
           <p>현재까지 모은 금액</p>
           <div className="progress-track">
@@ -993,7 +1033,9 @@ function TravelSavingsPage({
           <strong>{formatMoney(remaining)}</strong>
           <p>
             {remaining === 0
-              ? "목표 달성! 여행 갈 준비 끝 ✦"
+              ? isTravelGoal
+                ? "목표 달성! 여행 갈 준비 끝 ✦"
+                : "목표 달성! 준비 끝 ✦"
               : "다음 입금으로 조금 더 가까워져요."}
           </p>
         </article>
@@ -1005,18 +1047,31 @@ function TravelSavingsPage({
             <span>NEW TRANSACTION</span>
           </div>
           <form className="travel-deposit-form" onSubmit={submit}>
-            <label>
-              구분
-              <select
-                value={form.kind}
-                onChange={(event) =>
-                  setForm({ ...form, kind: event.target.value })
-                }
-              >
-                <option value="deposit">입금</option>
-                <option value="withdrawal">출금</option>
-              </select>
-            </label>
+            <fieldset className="transaction-type-picker">
+              <legend>
+                구분 <small>필수</small>
+              </legend>
+              <div>
+                <button
+                  type="button"
+                  className={form.kind === "deposit" ? "selected" : ""}
+                  onClick={() => setForm({ ...form, kind: "deposit" })}
+                >
+                  ＋ 입금
+                </button>
+                <button
+                  type="button"
+                  className={
+                    form.kind === "withdrawal"
+                      ? "selected withdrawal"
+                      : "withdrawal"
+                  }
+                  onClick={() => setForm({ ...form, kind: "withdrawal" })}
+                >
+                  − 출금
+                </button>
+              </div>
+            </fieldset>
             <label>
               기록 날짜
               <input
@@ -1028,7 +1083,11 @@ function TravelSavingsPage({
               />
             </label>
             <label>
-              {form.kind === "withdrawal" ? "출금액" : "입금액"}
+              {form.kind === "withdrawal"
+                ? "출금액"
+                : form.kind === "deposit"
+                  ? "입금액"
+                  : "금액"}
               <input
                 inputMode="numeric"
                 value={form.amount}
@@ -1056,7 +1115,11 @@ function TravelSavingsPage({
             </label>
             {error && <p className="form-error">✦ {error}</p>}
             <button className="save-button" type="submit">
-              {form.kind === "withdrawal" ? "출금 기록 추가" : "입금 기록 추가"}
+              {form.kind === "withdrawal"
+                ? "출금 기록 추가"
+                : form.kind === "deposit"
+                  ? "입금 기록 추가"
+                  : "기록 추가"}
             </button>
           </form>
         </article>
@@ -1262,7 +1325,14 @@ function YearBlock({ year, months, categories, checks, onToggle, onAssign }) {
   );
 }
 
-function MonthCard({ month, categories, checks, onToggle, onAssign, compact = false }) {
+function MonthCard({
+  month,
+  categories,
+  checks,
+  onToggle,
+  onAssign,
+  compact = false,
+}) {
   const scheduled = categories.filter((category) =>
     isScheduled(category, month),
   );
@@ -1276,11 +1346,17 @@ function MonthCard({ month, categories, checks, onToggle, onAssign, compact = fa
     <article
       className={`month-card ${compact ? "compact" : ""} ${onAssign ? "drop-target" : ""}`}
       onDragOver={onAssign ? (event) => event.preventDefault() : undefined}
-      onDrop={onAssign ? (event) => {
-        event.preventDefault();
-        const categoryId = event.dataTransfer.getData("text/save-me-category");
-        if (categoryId) onAssign(categoryId, month);
-      } : undefined}
+      onDrop={
+        onAssign
+          ? (event) => {
+              event.preventDefault();
+              const categoryId = event.dataTransfer.getData(
+                "text/save-me-category",
+              );
+              if (categoryId) onAssign(categoryId, month);
+            }
+          : undefined
+      }
     >
       <div className="month-card-heading">
         <div>

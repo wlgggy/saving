@@ -54,6 +54,12 @@ body { background:#92d9ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 .menu-checkbox { display:flex !important; align-items:center; gap:5px; color:#6194be; font-size:10px !important; font-weight:700; }
 .menu-checkbox input { width:15px !important; height:15px; margin:0; accent-color:#f278b7; }
 .modal-buttons { display:flex; align-items:center; gap:7px; }
+.transaction-type-picker { display:grid; gap:5px; margin:0; padding:0; border:0; color:#6194be; font-size:10px; font-weight:700; }
+.transaction-type-picker legend { padding:0; }.transaction-type-picker legend small { color:#f076b0; font-size:8px; }
+.transaction-type-picker > div { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.transaction-type-picker button { padding:8px; border:1px solid #9bc9eb; border-radius:9px; background:#fff; color:#5795ce; font-size:10px; font-weight:700; }
+.transaction-type-picker button.selected { border-color:#ed7fb9; background:#ffe3f1; color:#df5f9e; box-shadow:inset 1px 1px #fff, inset -1px -1px #f0b1d1; }
+.transaction-type-picker button.withdrawal.selected { border-color:#83bce9; background:#e3f4ff; color:#4e8ac5; }
 .window-shell { max-width:1180px; }
 .window-shell { position:relative; z-index:1; border-color:#5e9fe4; border-radius:8px 8px 0 0; overflow:hidden; box-shadow:7px 9px 19px #3d7bb26b; }
 .window-titlebar { background:linear-gradient(180deg,#c7eeff,#62aeea 43%,#438ed8 46%,#6db8ee); color:#fff; text-shadow:1px 1px #3979bc; font-weight:700; }.window-controls i { color:#4587ca; border-color:#8bbce8; border-radius:3px; background:linear-gradient(#f8ffff,#c6efff); box-shadow:inset 1px 1px #fff, inset -1px -1px #76afe2; }.window-controls i:last-child { color:#fff; background:linear-gradient(#ffafd8,#ec6eac); border-color:#e475b0; }
