@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import profileFrog from './assets/profile-frog.png'
 import pixelAngelWingLeft from './assets/pixel-angel-wing-left.png'
+import pixelClouds from './assets/pixel-clouds.png'
 
 const START_MONTH = '2026-01'
 const END_MONTH = '2030-12'
@@ -23,6 +24,7 @@ const makeMonths = (start = START_MONTH, end = END_MONTH) => {
 
 const PLAN_MONTHS = makeMonths()
 const YEAR_OPTIONS = [2026, 2027, 2028, 2029, 2030]
+const FIXED_PLAN_TOTAL = 100000000
 const emptyForm = { name: '', account: '', start: '', end: '', deposit: '', target: '' }
 const DEFAULT_SETTINGS = { nickname: 'coco', bio: '오늘도 귀엽게 저축하는 중 .ᐟ', profileImage: '', spotifyUrl: 'https://open.spotify.com/track/2Lqdqm1ql2AWdEgLjwirN4?si=94058eaad1d8490f' }
 
@@ -76,11 +78,6 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...savings, version: 1 }))
   }, [savings])
 
-  const allScheduledTotal = useMemo(() => savings.categories.reduce(
-    (total, category) => total + PLAN_MONTHS.filter((month) => isScheduled(category, month)).length * Number(category.deposit),
-    0,
-  ), [savings.categories])
-
   const checkedTotal = useMemo(() => Object.entries(savings.checks).reduce((total, [key, checked]) => {
     if (!checked) return total
     const [categoryId, month] = key.split(':')
@@ -88,7 +85,7 @@ function App() {
     return category && isScheduled(category, month) ? total + Number(category.deposit) : total
   }, 0), [savings])
 
-  const overallProgress = allScheduledTotal ? Math.round((checkedTotal / allScheduledTotal) * 100) : 0
+  const overallProgress = Math.round((checkedTotal / FIXED_PLAN_TOTAL) * 100)
   const travelCategories = useMemo(() => savings.categories.filter((category) => isTravelSavings(category.name)), [savings.categories])
   const activeTravel = travelCategories.find((category) => category.id === activeTravelId)
 
@@ -214,7 +211,7 @@ function App() {
 
   return (
     <div className="retro-desktop">
-      <div className="cloud-decoration" aria-hidden="true"><i /><i /><i /><b>✦</b><b>✧</b></div>
+      <img className="pixel-clouds" src={pixelClouds} alt="" aria-hidden="true" />
       <div className="desktop-decor decor-star">★</div>
       <img className="pixel-wing pixel-wing-left" src={pixelAngelWingLeft} alt="" aria-hidden="true" />
       <img className="pixel-wing pixel-wing-right" src={pixelAngelWingLeft} alt="" aria-hidden="true" />
@@ -229,8 +226,6 @@ function App() {
           </section>
           <nav aria-label="저축 메뉴">
             <button className={`nav-item ${!activeTravelId && !showSettings ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); setShowSettings(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>▣</span> 대시보드</button>
-            <button className="nav-item" onClick={() => { setShowSettings(false); document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' }) }}><span>☑</span> 저축 체크</button>
-            <button className="nav-item" onClick={() => { setShowSettings(false); document.querySelector('.categories-section')?.scrollIntoView({ behavior: 'smooth' }) }}><span>▤</span> 내 목표</button>
             {travelCategories.map((category) => <button key={category.id} className={`nav-item travel-nav ${activeTravelId === category.id ? 'active' : ''}`} onClick={() => { setActiveTravelId(category.id); setShowSettings(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>✈</span> {displayTravelName(category.name)}</button>)}
             <button className={`nav-item ${showSettings ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); setShowSettings(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>⚙</span> 설정</button>
           </nav>
@@ -261,7 +256,7 @@ function App() {
           <div className="summary-top"><span>CHECKED SAVINGS</span><span className="mini-sticker">{overallProgress}%</span></div>
           <strong>{formatMoney(checkedTotal)}</strong>
           <div className="progress-track"><i style={{ width: `${overallProgress}%` }} /></div>
-          <p>계획 금액 {formatMoney(allScheduledTotal)} 중</p>
+          <p>계획 금액 {formatMoney(FIXED_PLAN_TOTAL)} 중</p>
         </article>
         <article className="summary-card small-summary"><span>계획 기간</span><strong>60 <b>months</b></strong><p>2026.01 — 2030.12</p></article>
         <article className="summary-card small-summary aqua"><span>오늘의 한 걸음</span><strong>{Object.values(savings.checks).filter(Boolean).length} <b>checks</b></strong><p>차곡차곡 쌓는 중!</p></article>
