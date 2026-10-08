@@ -21,6 +21,7 @@ create table if not exists public.save_me_shared_categories (
   target_amount bigint not null default 0 check (target_amount >= 0),
   manual_months text[] not null default '{}',
   sort_order integer not null default 0,
+  menu_page boolean not null default false,
   created_at timestamptz not null default now(),
   check (start_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$'),
   check (end_month ~ '^20[0-9]{2}-(0[1-9]|1[0-2])$')
@@ -28,7 +29,12 @@ create table if not exists public.save_me_shared_categories (
 
 alter table public.save_me_shared_categories
   add column if not exists manual_months text[] not null default '{}',
-  add column if not exists sort_order integer not null default 0;
+  add column if not exists sort_order integer not null default 0,
+  add column if not exists menu_page boolean not null default false;
+
+update public.save_me_shared_categories
+set menu_page = true
+where name like '%여행적금%' and menu_page = false;
 
 create table if not exists public.save_me_shared_checks (
   category_id text not null,

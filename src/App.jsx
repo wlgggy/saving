@@ -38,6 +38,7 @@ const emptyForm = {
   end: "",
   deposit: "",
   target: "",
+  menuPage: false,
 };
 const DEFAULT_SETTINGS = {
   nickname: "coco",
@@ -92,9 +93,8 @@ const isScheduled = (category, month) => {
 };
 const checkKey = (categoryId, month) => `${categoryId}:${month}`;
 const formatMoney = (value) => money.format(Number(value || 0));
-const isTravelSavings = (name) => name.includes("여행적금");
-const displayTravelName = (name) =>
-  name.replaceAll("여행적금", "").trim() || "여행";
+const isMenuCategory = (category) => Boolean(category.menuPage);
+const displayTravelName = (name) => name || "여행";
 const formatAmountInput = (value) =>
   value.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const spotifyEmbedUrl = (url) => {
@@ -119,6 +119,7 @@ function normalizeSavings(saved) {
     categories: saved.categories.map((category) => ({
       ...category,
       manualMonths: category.manualMonths || [],
+      menuPage: category.menuPage ?? Boolean(category.travel),
     })),
     settings: { ...DEFAULT_SETTINGS, ...(saved.settings || {}) },
   };
@@ -217,12 +218,12 @@ function App() {
   const overallProgress = Math.round((checkedTotal / FIXED_PLAN_TOTAL) * 100);
   const travelCategories = useMemo(
     () =>
-      savings.categories.filter((category) => isTravelSavings(category.name)),
+      savings.categories.filter((category) => isMenuCategory(category)),
     [savings.categories],
   );
   const checklistCategories = useMemo(
     () =>
-      savings.categories.filter((category) => !isTravelSavings(category.name)),
+      savings.categories.filter((category) => !isMenuCategory(category)),
     [savings.categories],
   );
   const activeTravel = travelCategories.find(
@@ -271,6 +272,7 @@ function App() {
         ? formatAmountInput(String(category.deposit))
         : "",
       target: category.target ? formatAmountInput(String(category.target)) : "",
+      menuPage: Boolean(category.menuPage),
     });
     setFormError("");
     setModalOpen(true);
@@ -287,7 +289,7 @@ function App() {
       return setFormError("목표금액을 다시 확인해 주세요.");
     if (form.start && form.end && form.start > form.end)
       return setFormError("시작월은 종료월보다 앞서야 해요.");
-    if (isTravelSavings(form.name) && (!Number.isFinite(target) || target <= 0))
+    if (form.menuPage && (!Number.isFinite(target) || target <= 0))
       return setFormError("여행 예산을 입력해 주세요.");
 
     const category = {
@@ -301,7 +303,8 @@ function App() {
       manualMonths: editingId
         ? savings.categories.find((item) => item.id === editingId)?.manualMonths || []
         : [],
-      travel: isTravelSavings(form.name)
+      menuPage: form.menuPage,
+      travel: form.menuPage
         ? {
             budget: target,
             deposits: editingId
@@ -759,9 +762,7 @@ function App() {
                           {index === 0 ? "✦" : index === 1 ? "♥" : "☻"}
                         </span>
                         <h3>
-                          {isTravelSavings(category.name)
-                            ? displayTravelName(category.name)
-                            : category.name}
+                          {category.name}
                         </h3>
                         <p>{category.account || "연결된 계좌/상품 없음"}</p>
                         <strong>{formatMoney(saved)}</strong>
@@ -871,8 +872,8 @@ function App() {
                         />
                       </label>
                       <label>
-                        {isTravelSavings(form.name) ? "여행 예산" : "목표금액"}{" "}
-                        {isTravelSavings(form.name) && <small>필수</small>}
+                        {form.menuPage ? "여행 예산" : "목표금액"}{" "}
+                        {form.menuPage && <small>필수</small>}
                         <input
                           inputMode="numeric"
                           value={form.target}
@@ -886,18 +887,30 @@ function App() {
                       </label>
                       {formError && <p className="form-error">✦ {formError}</p>}
                       <div className="modal-actions">
-                        {editingId && (
-                          <button
-                            type="button"
-                            className="delete-button"
-                            onClick={() => deleteCategory(editingId)}
-                          >
-                            삭제
+                        <label className="menu-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={form.menuPage}
+                            onChange={(event) =>
+                              setForm({ ...form, menuPage: event.target.checked })
+                            }
+                          />
+                          메뉴에 추가
+                        </label>
+                        <div className="modal-buttons">
+                          {editingId && (
+                            <button
+                              type="button"
+                              className="delete-button"
+                              onClick={() => deleteCategory(editingId)}
+                            >
+                              삭제
+                            </button>
+                          )}
+                          <button type="submit" className="save-button">
+                            {editingId ? "저장하기" : "카테고리 추가"}
                           </button>
-                        )}
-                        <button type="submit" className="save-button">
-                          {editingId ? "저장하기" : "카테고리 추가"}
-                        </button>
+                        </div>
                       </div>
                     </form>
                   </section>

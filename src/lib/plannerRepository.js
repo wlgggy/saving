@@ -47,7 +47,8 @@ export async function loadPlanner(defaultSettings) {
       deposit: Number(category.deposit_amount || 0),
       target: Number(category.target_amount || 0),
       manualMonths: category.manual_months || [],
-      travel: category.name.includes('여행적금')
+      menuPage: Boolean(category.menu_page),
+      travel: category.menu_page
         ? { budget: Number(category.target_amount || 0), deposits: depositsByCategory[category.id] || [] }
         : undefined,
     })),
@@ -96,6 +97,7 @@ export async function savePlanner(state) {
         target_amount: Number(category.target || 0),
         manual_months: category.manualMonths || [],
         sort_order: index,
+        menu_page: Boolean(category.menuPage),
       })),
       { onConflict: 'id' },
     )
