@@ -145,6 +145,7 @@ function App() {
     isSupabaseConfigured ? "loading" : "local",
   );
   const saveQueue = useRef(Promise.resolve());
+  const skipNextCloudSave = useRef(false);
 
   useEffect(() => {
     localStorage.setItem(
@@ -179,6 +180,10 @@ function App() {
 
   useEffect(() => {
     if (!cloudReady || !isSupabaseConfigured) return undefined;
+    if (skipNextCloudSave.current) {
+      skipNextCloudSave.current = false;
+      return undefined;
+    }
     setSyncStatus("saving");
     const saveTimer = window.setTimeout(() => {
       saveQueue.current = saveQueue.current
@@ -281,6 +286,8 @@ function App() {
 
   const submitCategory = (event) => {
     event.preventDefault();
+    if (isSupabaseConfigured && !cloudReady)
+      return setFormError("클라우드 데이터를 불러오는 중이에요. 잠시 후 다시 저장해 주세요.");
     const isTravelGoal = isTravelGoalName(form.name);
     const deposit = isTravelGoal
       ? 0
@@ -326,14 +333,27 @@ function App() {
           }
         : undefined,
     };
-    setSavings((previous) => ({
-      ...previous,
+    const nextSavings = {
+      ...savings,
       categories: editingId
-        ? previous.categories.map((item) =>
+        ? savings.categories.map((item) =>
             item.id === editingId ? category : item,
           )
-        : [...previous.categories, category],
-    }));
+        : [...savings.categories, category],
+    };
+    setSavings(nextSavings);
+    if (isSupabaseConfigured) {
+      skipNextCloudSave.current = true;
+      setSyncStatus("saving");
+      saveQueue.current = saveQueue.current
+        .catch(() => undefined)
+        .then(() => savePlanner(nextSavings))
+        .then(() => setSyncStatus("saved"))
+        .catch((error) => {
+          setSyncStatus("error");
+          console.error("Supabase category save failed:", error.message);
+        });
+    }
     setModalOpen(false);
   };
 
