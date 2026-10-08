@@ -162,10 +162,18 @@ function App() {
 
   return (
     <div className="retro-desktop">
+      <div className="desktop-decor decor-cloud">☁</div>
+      <div className="desktop-decor decor-star">★</div>
+      <div className="desktop-shortcuts" aria-hidden="true">
+        <span><i>📁</i>MY GOALS</span>
+        <span><i>💌</i>SAVE LIST</span>
+        <span><i>⭐</i>WISH!</span>
+      </div>
       <div className="window-shell">
         <div className="window-titlebar"><span>₩ SAVE ME.exe — 저축 관리 프로그램</span><div className="window-controls" aria-hidden="true"><i>_</i><i>□</i><i>×</i></div></div>
         <aside className="sidebar">
           <div className="brand"><b>₩</b><span>MY 저축 플래너</span></div>
+          <div className="sidebar-mascot"><span>✦</span><b>Save<br />with me!</b></div>
           <nav aria-label="저축 메뉴">
             <button className="nav-item active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>▣</span> 대시보드</button>
             <button className="nav-item" onClick={() => document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' })}><span>☑</span> 저축 체크</button>
