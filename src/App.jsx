@@ -43,6 +43,8 @@ const isScheduled = (category, month) => month >= (category.start || START_MONTH
 const checkKey = (categoryId, month) => `${categoryId}:${month}`
 const formatMoney = (value) => money.format(Number(value || 0))
 const isTravelSavings = (name) => name.includes('여행적금')
+const displayTravelName = (name) => name.replaceAll('여행적금', '').trim() || '여행'
+const formatAmountInput = (value) => value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 const spotifyEmbedUrl = (url) => {
   const trackId = url?.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/)?.[1]
   return `https://open.spotify.com/embed/track/${trackId || '2Lqdqm1ql2AWdEgLjwirN4'}?utm_source=generator`
@@ -124,8 +126,8 @@ function App() {
       account: category.account || '',
       start: category.start === START_MONTH ? '' : category.start,
       end: category.end === END_MONTH ? '' : category.end,
-      deposit: String(category.deposit),
-      target: category.target ? String(category.target) : '',
+      deposit: category.deposit ? formatAmountInput(String(category.deposit)) : '',
+      target: category.target ? formatAmountInput(String(category.target)) : '',
     })
     setFormError('')
     setModalOpen(true)
@@ -229,7 +231,7 @@ function App() {
             <button className={`nav-item ${!activeTravelId && !showSettings ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); setShowSettings(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>▣</span> 대시보드</button>
             <button className="nav-item" onClick={() => { setShowSettings(false); document.querySelector('.planner-panel')?.scrollIntoView({ behavior: 'smooth' }) }}><span>☑</span> 저축 체크</button>
             <button className="nav-item" onClick={() => { setShowSettings(false); document.querySelector('.categories-section')?.scrollIntoView({ behavior: 'smooth' }) }}><span>▤</span> 내 목표</button>
-            {travelCategories.map((category) => <button key={category.id} className={`nav-item travel-nav ${activeTravelId === category.id ? 'active' : ''}`} onClick={() => { setActiveTravelId(category.id); setShowSettings(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>✈</span> {category.name}</button>)}
+            {travelCategories.map((category) => <button key={category.id} className={`nav-item travel-nav ${activeTravelId === category.id ? 'active' : ''}`} onClick={() => { setActiveTravelId(category.id); setShowSettings(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>✈</span> {displayTravelName(category.name)}</button>)}
             <button className={`nav-item ${showSettings ? 'active' : ''}`} onClick={() => { setActiveTravelId(null); setShowSettings(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}><span>⚙</span> 설정</button>
           </nav>
           <section className="music-card" aria-label="지금 듣는 노래">
@@ -301,7 +303,7 @@ function App() {
             return <article className={`category-card card-${index % 3}`} key={category.id}>
               <button className="edit-button" onClick={() => openEdit(category)} aria-label={`${category.name} 편집`}>•••</button>
               <span className="category-orb">{index === 0 ? '✦' : index === 1 ? '♥' : '☻'}</span>
-              <h3>{category.name}</h3>
+              <h3>{isTravelSavings(category.name) ? displayTravelName(category.name) : category.name}</h3>
               <p>{category.account || '연결된 계좌/상품 없음'}</p>
               <strong>{formatMoney(saved)}</strong>
               <small>{category.target ? `목표 ${formatMoney(category.target)} · ${targetPercent}%` : `매회 ${formatMoney(category.deposit)}`}</small>
@@ -320,8 +322,8 @@ function App() {
             <label>항목명 <b>필수</b><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoFocus /></label>
             <label>계좌번호 또는 상품명<input value={form.account} onChange={(event) => setForm({ ...form, account: event.target.value })} /></label>
             <div className="form-row"><label>시작월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>종료월 <small>선택</small><input type="month" min={START_MONTH} max={END_MONTH} value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div>
-            <label>1회 저축액 <small>선택</small><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: event.target.value })} /></label>
-            <label>{isTravelSavings(form.name) ? '여행 예산' : '목표금액'} <small>{isTravelSavings(form.name) ? '필수' : '선택'}</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} /></label>
+            <label>1회 저축액 <small>선택</small><input inputMode="numeric" value={form.deposit} onChange={(event) => setForm({ ...form, deposit: formatAmountInput(event.target.value) })} /></label>
+            <label>{isTravelSavings(form.name) ? '여행 예산' : '목표금액'} <small>{isTravelSavings(form.name) ? '필수' : '선택'}</small><input inputMode="numeric" value={form.target} onChange={(event) => setForm({ ...form, target: formatAmountInput(event.target.value) })} /></label>
             {formError && <p className="form-error">✦ {formError}</p>}
             <div className="modal-actions">{editingId && <button type="button" className="delete-button" onClick={() => deleteCategory(editingId)}>삭제</button>}<button type="submit" className="save-button">{editingId ? '저장하기' : '카테고리 추가'}</button></div>
           </form>
@@ -351,9 +353,9 @@ function TravelSavingsPage({ category, onBack, onAddDeposit, onRemoveDeposit }) 
   }
 
   return <section className="travel-page">
-    <header className="travel-page-header"><div><button className="back-button" onClick={onBack}>← 대시보드</button><p className="eyebrow">TRAVEL SAVINGS PAGE</p><h1>{category.name} <em>여행적금</em></h1><p>여행을 향해 오늘도 한 칸 더 가까이.</p></div></header>
+    <header className="travel-page-header"><div><button className="back-button" onClick={onBack}>← 대시보드</button><p className="eyebrow">TRAVEL SAVINGS PAGE</p><h1>{displayTravelName(category.name)} <em>여행적금</em></h1><p>여행을 향해 오늘도 한 칸 더 가까이.</p></div></header>
     <section className="travel-summary"><article className="travel-progress"><span>여행 예산 {formatMoney(budget)}</span><strong>{formatMoney(saved)}</strong><p>현재까지 모은 금액</p><div className="progress-track"><i style={{ width: `${progress}%` }} /></div><b>{progress}% complete</b></article><article className="travel-remaining"><span>남은 금액</span><strong>{formatMoney(remaining)}</strong><p>{remaining === 0 ? '목표 달성! 여행 갈 준비 끝 ✦' : '다음 입금으로 조금 더 가까워져요.'}</p></article></section>
-    <section className="travel-grid"><article className="travel-panel"><div className="travel-panel-title"><h2>＋ 입출금 기록하기</h2><span>NEW TRANSACTION</span></div><form className="travel-deposit-form" onSubmit={submit}><label>구분<select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}><option value="deposit">입금</option><option value="withdrawal">출금</option></select></label><label>기록 날짜<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label>{form.kind === 'withdrawal' ? '출금액' : '입금액'}<input inputMode="numeric" placeholder="예: 100000" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label><label>메모 <small>선택</small><input placeholder={form.kind === 'withdrawal' ? '예: 여행 예약금 결제' : '예: 월급날 적금'} value={form.memo} onChange={(event) => setForm({ ...form, memo: event.target.value })} /></label>{error && <p className="form-error">✦ {error}</p>}<button className="save-button" type="submit">{form.kind === 'withdrawal' ? '출금 기록 추가' : '입금 기록 추가'}</button></form></article><article className="travel-panel"><div className="travel-panel-title"><h2>▤ 입출금 히스토리</h2><span>{deposits.length} records</span></div>{deposits.length ? <div className="travel-deposit-list">{deposits.map((deposit) => <div className={`travel-deposit-row ${deposit.kind === 'withdrawal' ? 'withdrawal' : ''}`} key={deposit.id}><div><strong>{deposit.date}</strong><span>{deposit.memo || (deposit.kind === 'withdrawal' ? '출금 기록' : '입금 기록')}</span></div><b>{deposit.kind === 'withdrawal' ? '− ' : '+ '}{formatMoney(deposit.amount)}</b><button onClick={() => onRemoveDeposit(category.id, deposit.id)} aria-label="입출금 기록 삭제">×</button></div>)}</div> : <p className="travel-empty">아직 입출금 기록이 없어요.<br />첫 저축을 추가해 볼까요?</p>}</article></section>
+    <section className="travel-grid"><article className="travel-panel"><div className="travel-panel-title"><h2>＋ 입출금 기록하기</h2><span>NEW TRANSACTION</span></div><form className="travel-deposit-form" onSubmit={submit}><label>구분<select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}><option value="deposit">입금</option><option value="withdrawal">출금</option></select></label><label>기록 날짜<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label>{form.kind === 'withdrawal' ? '출금액' : '입금액'}<input inputMode="numeric" value={form.amount} onChange={(event) => setForm({ ...form, amount: formatAmountInput(event.target.value) })} /></label><label>메모 <small>선택</small><input placeholder={form.kind === 'withdrawal' ? '예: 여행 예약금 결제' : '예: 월급날 적금'} value={form.memo} onChange={(event) => setForm({ ...form, memo: event.target.value })} /></label>{error && <p className="form-error">✦ {error}</p>}<button className="save-button" type="submit">{form.kind === 'withdrawal' ? '출금 기록 추가' : '입금 기록 추가'}</button></form></article><article className="travel-panel"><div className="travel-panel-title"><h2>▤ 입출금 히스토리</h2><span>{deposits.length} records</span></div>{deposits.length ? <div className="travel-deposit-list">{deposits.map((deposit) => <div className={`travel-deposit-row ${deposit.kind === 'withdrawal' ? 'withdrawal' : ''}`} key={deposit.id}><div><strong>{deposit.date}</strong><span>{deposit.memo || (deposit.kind === 'withdrawal' ? '출금 기록' : '입금 기록')}</span></div><b>{deposit.kind === 'withdrawal' ? '− ' : '+ '}{formatMoney(deposit.amount)}</b><button onClick={() => onRemoveDeposit(category.id, deposit.id)} aria-label="입출금 기록 삭제">×</button></div>)}</div> : <p className="travel-empty">아직 입출금 기록이 없어요.<br />첫 저축을 추가해 볼까요?</p>}</article></section>
   </section>
 }
 
